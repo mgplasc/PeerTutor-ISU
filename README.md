@@ -38,13 +38,14 @@ IT 391 Spring 2026
 **Installation**:
   1. Clone repository:
      git clone https://github.com/mgplasc/PeerTutor-ISU
+     
      cd PeerTutor-ISU
-  2. Set up backend:
+  3. Set up backend:
      cd backend
      mvn clean install
      **Configure PostgreSQL credentials in application.properties before running.**
      mvn spring-boot:run
-  3. Set up frontend:
+  4. Set up frontend:
      cd frontend
      npm install
      npm start
