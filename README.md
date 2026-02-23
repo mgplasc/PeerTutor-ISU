@@ -42,23 +42,14 @@ IT 391 Spring 2026
      git clone https://github.com/mgplasc/PeerTutor-ISU
      
      cd PeerTutor-ISU
-  2. Set up backend:
+     
+  3. Set up backend:
      
      cd backend
      
      mvn clean install
      
      **Configure PostgreSQL credentials in application.properties before running.**
-
-     export NEON_DB_URL
-
-     export NEON_DB_USERNAME
-
-     export NEON_DB_PASSWORD
-
-     ($env: instead of export for windows powershell)
-
-     echo $NEON_DB_URL # show database URL 
 
      mvn spring-boot:run
      
