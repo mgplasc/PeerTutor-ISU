@@ -49,10 +49,20 @@ IT 391 Spring 2026
      mvn clean install
      
      **Configure PostgreSQL credentials in application.properties before running.**
-     
+
+     export NEON_DB_URL
+
+     export NEON_DB_USERNAME
+
+     export NEON_DB_PASSWORD
+
+     ($env: instead of export for windows powershell)
+
+     echo $NEON_DB_URL # show database URL 
+
      mvn spring-boot:run
      
-  3. Set up frontend:
+  2. Set up frontend:
      
      cd frontend
      
@@ -60,7 +70,7 @@ IT 391 Spring 2026
 
      npm start
      
-  4. Run frontend on Android *Still working on this setup*
+  3. Run frontend on Android *Still working on this setup*
     
     Open Android Studio -> AVD Manager -> Start an emulator
 
