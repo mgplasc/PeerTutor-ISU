@@ -61,7 +61,7 @@ IT 391 Spring 2026
 
      npm start
      
-  3. Run frontend on Android *Still working on this setup*
+  3. Run frontend on Android (Still working on this setup)
     
     Open Android Studio -> AVD Manager -> Start an emulator
 
