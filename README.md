@@ -61,10 +61,28 @@ IT 391 Spring 2026
 
      npm start
      
-  3. Run frontend on Android *Still working on this setup*
+  3. Run frontend on Android (Still working on this setup)
     
     Open Android Studio -> AVD Manager -> Start an emulator
 
     Run app from terminal:
 
     npx react-native run-android
+
+    **To make sure your system is up to date with our github**:
+    
+    git branch (to make sure you're on your working branch)
+
+    git fetch origin 
+
+    git merge origin/main
+
+    **To commit changes**:
+
+    git add . 
+
+    git commit -m "description of changes made"
+
+    git push origin yourbranchname
+
+    **Then on github website create a pull request and merge that to main**
