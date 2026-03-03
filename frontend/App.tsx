@@ -5,6 +5,7 @@
  * @format
  */
 
+import RoleSwitch from './roleswitch';
 import { NewAppScreen } from '@react-native/new-app-screen';
 import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
 import {
@@ -28,6 +29,10 @@ function AppContent() {
 
   return (
     <View style={styles.container}>
+      {/* piece*/}
+      <RoleSwitch /> 
+
+      {/* Their piece of the puzzle - DON'T TOUCH THIS */}
       <NewAppScreen
         templateFileName="App.tsx"
         safeAreaInsets={safeAreaInsets}
