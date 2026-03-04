@@ -1,4 +1,4 @@
-package com.example.backend.model;
+package com.peertutor.model;
 
 public enum UserRole {
     STUDENT,

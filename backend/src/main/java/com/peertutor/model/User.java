@@ -1,4 +1,4 @@
-package com.example.backend.model;
+package com.peertutor.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
