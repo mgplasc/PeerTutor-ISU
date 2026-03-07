@@ -8,17 +8,17 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 import java.util.List;
+import java.util.UUID;  
 
 @Repository
-public interface VerificationTokenRepository extends JpaRepository<VerificationToken, Long> {
-    
+public interface VerificationTokenRepository extends JpaRepository<VerificationToken, UUID> {  
     // Find token by the token string
     Optional<VerificationToken> findByToken(String token);
     
     // Find all tokens for a specific user
     List<VerificationToken> findByUser(User user);
     
-    // Delete all tokens for a user (useful for cleanup)
+    // Delete all tokens for a user 
     void deleteByUser(User user);
     
     // Check if a token exists for a user

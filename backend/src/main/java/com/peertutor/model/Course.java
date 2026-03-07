@@ -1,3 +1,4 @@
+// Entity class for Course, representing a course in the system with fields for course number and name
 package com.peertutor.model;
 
 import jakarta.persistence.*;
