@@ -1,49 +1,62 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
-import RoleSwitch from './roleswitch';
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+// App.tsx
+import React, { useState } from 'react';
+import { StatusBar, StyleSheet, View, Image, Text } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import RoleSwitch from './components/RoleSwitch';
+import StudentView from './components/StudentView';
+import TutorView from './components/TutorView';
+import { Colors } from './theme';
 
 function App() {
-  const isDarkMode = useColorScheme() === 'dark';
-
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      <StatusBar barStyle="light-content" backgroundColor={Colors.redbirdRed} />
       <AppContent />
     </SafeAreaProvider>
   );
 }
 
 function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
+  const [isTutor, setIsTutor] = useState(false);
 
   return (
-    <View style={styles.container}>
-      {/* piece*/}
-      <RoleSwitch /> 
-
-      {/* Their piece of the puzzle - DON'T TOUCH THIS */}
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
-      />
-    </View>
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>PeerTutor ISU</Text>
+      </View>
+      
+      {/* Role Switch */}
+      <RoleSwitch isTutor={isTutor} setIsTutor={setIsTutor} />
+      
+      {/* Conditional Views */}
+      {isTutor ? <TutorView /> : <StudentView />}
+      
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Colors.lightGray,
+  },
+  header: {
+    backgroundColor: Colors.redbirdRed,
+    padding: 16,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  logo: {
+    width: 30,
+    height: 30,
+    marginRight: 10,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.white,
   },
 });
 

@@ -69,7 +69,21 @@ IT 391 Spring 2026
 
     npx react-native run-android
 
-    **To make sure your system is up to date with our github**:
+  4. Run frontend on Mac
+
+    cd frontend 
+
+    npm install
+
+    cd ios
+
+    pod install
+
+    cd ..
+
+    npx react-native run-ios
+  
+  **To make sure your system is up to date with our github**:
     
     git branch (to make sure you're on your working branch)
 
@@ -77,7 +91,7 @@ IT 391 Spring 2026
 
     git merge origin/main
 
-    **To commit changes**:
+  **To commit changes**:
 
     git add . 
 

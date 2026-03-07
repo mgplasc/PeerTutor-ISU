@@ -1,3 +1,4 @@
+// Entity class for User, representing the core user information and relationships to StudentProfile and TutorProfile
 package com.peertutor.model;
 
 import jakarta.persistence.*;
@@ -15,14 +16,6 @@ public class User {
     private UUID id;
 
     @NotBlank
-    @Column(nullable = false)
-    private String firstName;
-
-    @NotBlank
-    @Column(nullable = false)
-    private String lastName;
-
-    @NotBlank
     @Email
     @Column(nullable = false, unique = true)
     private String email;
@@ -30,16 +23,6 @@ public class User {
     @NotBlank
     @Column(nullable = false)
     private String passwordHash;
-
-    @Column
-    private String profilePhotoUrl;
-
-    @Column(columnDefinition = "TEXT")
-    private String bio;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private UserRole userType;
 
     @Column(nullable = false)
     private boolean emailVerified = false;
@@ -49,6 +32,13 @@ public class User {
 
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    //Account type relationships
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private StudentProfile studentProfile;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private TutorProfile tutorProfile;
 
     @PrePersist
     protected void onCreate() {
@@ -64,30 +54,25 @@ public class User {
     // Getters and Setters
     public UUID getId() { return id; }
 
-    public String getFirstName() { return firstName; }
-    public void setFirstName(String firstName) { this.firstName = firstName; }
-
-    public String getLastName() { return lastName; }
-    public void setLastName(String lastName) { this.lastName = lastName; }
-
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
 
     public String getPasswordHash() { return passwordHash; }
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
 
-    public String getProfilePhotoUrl() { return profilePhotoUrl; }
-    public void setProfilePhotoUrl(String profilePhotoUrl) { this.profilePhotoUrl = profilePhotoUrl; }
-
-    public String getBio() { return bio; }
-    public void setBio(String bio) { this.bio = bio; }
-
-    public UserRole getUserType() { return userType; }
-    public void setUserType(UserRole userType) { this.userType = userType; }
-
     public boolean isEmailVerified() { return emailVerified; }
     public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+
+    public StudentProfile getStudentProfile() { return studentProfile; }
+    public void setStudentProfile(StudentProfile studentProfile) { this.studentProfile = studentProfile; }
+
+    public TutorProfile getTutorProfile() { return tutorProfile; }
+    public void setTutorProfile(TutorProfile tutorProfile) { this.tutorProfile = tutorProfile; }
+
+    // Helper methods
+    public boolean hasStudentProfile() { return studentProfile != null; }
+    public boolean hasTutorProfile() { return tutorProfile != null; }
 }

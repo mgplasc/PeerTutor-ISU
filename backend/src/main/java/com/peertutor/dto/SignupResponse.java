@@ -8,18 +8,35 @@ public class SignupResponse {
     private String firstName;
     private String lastName;
     private String email;
-    private String userType;
     private boolean emailVerified;
+    private boolean hasStudentProfile;
+    private boolean hasTutorProfile;
     private String message;
 
+    // Constructor for new user with one profile
     public SignupResponse(UUID id, String firstName, String lastName, String email, 
-                         String userType, boolean emailVerified, String message) {
+                         boolean emailVerified, String profileType, String message) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
-        this.userType = userType;
         this.emailVerified = emailVerified;
+        this.hasStudentProfile = "STUDENT".equals(profileType);
+        this.hasTutorProfile = "TUTOR".equals(profileType);
+        this.message = message;
+    }
+    
+    // Constructor for existing user adding second profile
+    public SignupResponse(UUID id, String firstName, String lastName, String email,
+                         boolean emailVerified, boolean hasStudentProfile, 
+                         boolean hasTutorProfile, String message) {
+        this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+        this.emailVerified = emailVerified;
+        this.hasStudentProfile = hasStudentProfile;
+        this.hasTutorProfile = hasTutorProfile;
         this.message = message;
     }
 
@@ -36,11 +53,18 @@ public class SignupResponse {
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
 
-    public String getUserType() { return userType; }
-    public void setUserType(String userType) { this.userType = userType; }
-
     public boolean isEmailVerified() { return emailVerified; }
     public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }
+
+    public boolean isHasStudentProfile() { return hasStudentProfile; }
+    public void setHasStudentProfile(boolean hasStudentProfile) { 
+        this.hasStudentProfile = hasStudentProfile; 
+    }
+
+    public boolean isHasTutorProfile() { return hasTutorProfile; }
+    public void setHasTutorProfile(boolean hasTutorProfile) { 
+        this.hasTutorProfile = hasTutorProfile; 
+    }
 
     public String getMessage() { return message; }
     public void setMessage(String message) { this.message = message; }
