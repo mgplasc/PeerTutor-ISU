@@ -23,7 +23,7 @@ public class CleanupService {
     private VerificationTokenRepository tokenRepository;
     
     // Run every hour
-    @Scheduled(fixedRate = 3600000) // runs every hour
+    //@Scheduled(fixedRate = 3600000) // runs every hour
     @Transactional
     public void cleanupUnverifiedAccounts() {
         LocalDateTime cutoff = LocalDateTime.now().minusHours(24);
