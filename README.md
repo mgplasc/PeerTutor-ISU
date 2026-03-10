@@ -52,24 +52,26 @@ IT 391 Spring 2026
      **Configure PostgreSQL credentials in application.properties before running.**
 
      mvn spring-boot:run
-     
-  2. Set up frontend:
-     
-     cd frontend
-     
-     npm install
+        
+  2. Run frontend on Android 
 
-     npm start
-     
-  3. Run frontend on Android (Still working on this setup)
+    cd frontend
+
+    npm install
     
     Open Android Studio -> AVD Manager -> Start an emulator
 
+    **Make sure to add Android SDK and emulator to your environment variables**
+
     Run app from terminal:
+
+    npx react-native start
+
+    On another frontend terminal:
 
     npx react-native run-android
 
-  4. Run frontend on Mac
+  3. Run frontend on Mac
 
     cd frontend 
 
