@@ -26,7 +26,7 @@ public class SignupRequest {
 
     // Tutor-specific fields
     private Double hourlyRate;
-    private List<String> coursesOffered;
+    private List<Long> courseIds;
     private Boolean availableForOnline;
     private Boolean availableForInPerson;
     
@@ -66,8 +66,8 @@ public class SignupRequest {
     public Double getHourlyRate() { return hourlyRate; }
     public void setHourlyRate(Double hourlyRate) { this.hourlyRate = hourlyRate; }
 
-    public List<String> getCoursesOffered() { return coursesOffered; }
-    public void setCoursesOffered(List<String> coursesOffered) { this.coursesOffered = coursesOffered; }
+    public List<Long> getCourseIds() { return courseIds; }
+    public void setCourseIds(List<Long> courseIds) { this.courseIds = courseIds; }
 
     public Boolean getAvailableForOnline() { return availableForOnline; }
     public void setAvailableForOnline(Boolean availableForOnline) { this.availableForOnline = availableForOnline; }

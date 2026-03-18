@@ -31,8 +31,8 @@ export type AuthUser = {
   emailVerified: boolean;
   hasStudentProfile: boolean;
   hasTutorProfile: boolean;
-  studentProfile: StudentProfile;
-  tutorProfile: TutorProfile;
+  studentProfile: StudentProfile | null;  // 👈 Allow null
+  tutorProfile: TutorProfile | null;      // 👈 Allow null
 };
 
 export type ActiveRole = 'STUDENT' | 'TUTOR';
@@ -53,8 +53,8 @@ const emptyUser: AuthUser = {
   emailVerified: false,
   hasStudentProfile: false,
   hasTutorProfile: false,
-  studentProfile: null,
-  tutorProfile: null,
+  studentProfile: null,  // 👈 Now this works with null
+  tutorProfile: null,     // 👈 Now this works with null
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -73,11 +73,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   function setUser(newUser: AuthUser) {
     setUserState(newUser);
+    // Automatically set role based on available profiles
     if (newUser.hasStudentProfile) {
       setActiveRole('STUDENT');
     } else if (newUser.hasTutorProfile) {
       setActiveRole('TUTOR');
     }
+    // If user has both, default to STUDENT (you can change this logic)
   }
 
   function logout() {
@@ -85,22 +87,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setActiveRole('STUDENT');
   }
 
+  // Safe access with optional chaining
   let displayName = '';
   let initials = '';
 
   if (activeRole === 'STUDENT' && user.studentProfile) {
-    displayName = user.studentProfile.firstName + ' ' + user.studentProfile.lastName;
+    displayName = `${user.studentProfile.firstName} ${user.studentProfile.lastName}`;
     initials = user.studentProfile.firstName.charAt(0) + user.studentProfile.lastName.charAt(0);
   } else if (activeRole === 'TUTOR' && user.tutorProfile) {
-    displayName = user.tutorProfile.firstName + ' ' + user.tutorProfile.lastName;
+    displayName = `${user.tutorProfile.firstName} ${user.tutorProfile.lastName}`;
     initials = user.tutorProfile.firstName.charAt(0) + user.tutorProfile.lastName.charAt(0);
-  } else if (user.email !== '') {
+  } else if (user.email) {
     displayName = user.email;
     initials = user.email.charAt(0).toUpperCase();
   }
 
   return (
-    <AuthContext.Provider value={{ user, activeRole, setUser, setActiveRole, logout, displayName, initials }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      activeRole, 
+      setUser, 
+      setActiveRole, 
+      logout, 
+      displayName, 
+      initials 
+    }}>
       {children}
     </AuthContext.Provider>
   );

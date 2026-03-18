@@ -10,7 +10,7 @@ public class TutorProfileUpdateRequest extends ProfileUpdateRequest {
     private Double hourlyRate;
     private Boolean availableForOnline;
     private Boolean availableForInPerson;
-    private List<String> coursesOffered;
+    private List<Long> courseIds;
 
     // Getters and Setters
     public String getFirstName() { return firstName; }
@@ -31,6 +31,6 @@ public class TutorProfileUpdateRequest extends ProfileUpdateRequest {
     public Boolean getAvailableForInPerson() { return availableForInPerson; }
     public void setAvailableForInPerson(Boolean availableForInPerson) { this.availableForInPerson = availableForInPerson; }
 
-    public List<String> getCoursesOffered() { return coursesOffered; }
-    public void setCoursesOffered(List<String> coursesOffered) { this.coursesOffered = coursesOffered; }
+    public List<Long> getCourseIds() { return courseIds; }  
+    public void setCourseIds(List<Long> courseIds) { this.courseIds = courseIds; }
 }

@@ -1,4 +1,3 @@
-// Entity class for User, representing the core user information and relationships to StudentProfile and TutorProfile
 package com.peertutor.model;
 
 import jakarta.persistence.*;
@@ -33,11 +32,11 @@ public class User {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
-    //Account type relationships
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    // Profile relationships
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private StudentProfile studentProfile;
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private TutorProfile tutorProfile;
 
     @PrePersist
@@ -53,6 +52,7 @@ public class User {
 
     // Getters and Setters
     public UUID getId() { return id; }
+    public void setId(UUID id) { this.id = id; }
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
@@ -67,10 +67,20 @@ public class User {
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 
     public StudentProfile getStudentProfile() { return studentProfile; }
-    public void setStudentProfile(StudentProfile studentProfile) { this.studentProfile = studentProfile; }
+    public void setStudentProfile(StudentProfile studentProfile) { 
+        this.studentProfile = studentProfile; 
+        if (studentProfile != null) {
+            studentProfile.setUser(this);
+        }
+    }
 
     public TutorProfile getTutorProfile() { return tutorProfile; }
-    public void setTutorProfile(TutorProfile tutorProfile) { this.tutorProfile = tutorProfile; }
+    public void setTutorProfile(TutorProfile tutorProfile) { 
+        this.tutorProfile = tutorProfile;
+        if (tutorProfile != null) {
+            tutorProfile.setUser(this);
+        }
+    }
 
     // Helper methods
     public boolean hasStudentProfile() { return studentProfile != null; }

@@ -12,13 +12,19 @@ public class AddProfileRequest {
     @NotBlank(message = "Profile type is required")
     @Pattern(regexp = "STUDENT|TUTOR", message = "Profile type must be STUDENT or TUTOR")
     private String profileType;  
+
+    @NotBlank(message = "First name is required")
+    private String firstName;
+
+    @NotBlank(message = "Last name is required")
+    private String lastName;
     
     // Common fields
     private String major;
     
     // Tutor-specific fields
     private Double hourlyRate;
-    private List<String> coursesOffered;
+    private List<Long> courseIds;
     private Boolean availableForOnline;
     private Boolean availableForInPerson;
     
@@ -39,9 +45,21 @@ public class AddProfileRequest {
     @JsonIgnore
     public boolean hasCoursesOffered() {
         if (isAddingTutorProfile()) {
-            return coursesOffered != null && !coursesOffered.isEmpty();
+            return courseIds != null && !courseIds.isEmpty();
         }
         return true;
+    }
+
+    @AssertTrue(message = "First name is required")
+    @JsonIgnore
+    public boolean hasFirstName() {
+        return firstName != null && !firstName.trim().isEmpty();
+    }
+    
+    @AssertTrue(message = "Last name is required")
+    @JsonIgnore
+    public boolean hasLastName() {
+        return lastName != null && !lastName.trim().isEmpty();
     }
     
     // Getters, Setters, and Helper methods 
@@ -54,9 +72,9 @@ public class AddProfileRequest {
     public Double getHourlyRate() { return hourlyRate; }
     public void setHourlyRate(Double hourlyRate) { this.hourlyRate = hourlyRate; }
     
-    public List<String> getCoursesOffered() { return coursesOffered; }
-    public void setCoursesOffered(List<String> coursesOffered) { this.coursesOffered = coursesOffered; }
-    
+    public List<Long> getCourseIds() { return courseIds; }
+    public void setCourseIds(List<Long> courseIds) { this.courseIds = courseIds; }
+
     public Boolean getAvailableForOnline() { return availableForOnline; }
     public void setAvailableForOnline(Boolean availableForOnline) { this.availableForOnline = availableForOnline; }
     
@@ -65,6 +83,12 @@ public class AddProfileRequest {
     
     public Integer getExpectedGraduation() { return expectedGraduation; }
     public void setExpectedGraduation(Integer expectedGraduation) { this.expectedGraduation = expectedGraduation; }
+
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
     
     // Helper methods
     public boolean isAddingStudentProfile() {

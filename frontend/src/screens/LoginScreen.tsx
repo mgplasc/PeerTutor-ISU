@@ -4,9 +4,9 @@ import {
   ScrollView, StyleSheet, Alert, ActivityIndicator,
 } from 'react-native';
 import { COLORS } from '../constants/colors';
-import { registerUser, checkEmailAvailable } from '../services/authService';
+import { registerUser, checkEmailAvailable, loginUser } from '../services/authService';
 import { getUserProfiles } from '../services/profileService';
-import { useAuth } from '../context/AuthContext';
+import { AuthUser, useAuth } from '../context/AuthContext';
 
 type Mode = 'login' | 'signup-student' | 'signup-tutor';
 
@@ -34,22 +34,45 @@ function LoginScreen() {
   const [inPersonAvail, setInPersonAvail] = useState(false);
 
   async function handleLogin() {
-    if (email === '' || password === '') {
-      Alert.alert('Missing Fields', 'Please enter your email and password.');
-      return;
-    }
-    setLoading(true);
-    try {
-      // TODO: replace this with login call (POST /api/auth/login)
-      Alert.alert(
-        'Login Coming Soon',
-        'The login endpoint is not yet available. Please use Sign Up for now.'
-      );
-    } catch (err) {
-      Alert.alert('Login Failed', 'Could not log in. Please try again.');
-    }
+  if (email === '' || password === '') {
+    Alert.alert('Missing Fields', 'Please enter your email and password.');
+    return;
+  }
+
+  if (!email.endsWith('@ilstu.edu')) {
+    Alert.alert('Invalid Email', 'You must use an @ilstu.edu email address.');
+    return;
+  }
+
+  setLoading(true);
+  try {
+    // Call the login API
+    const loginResponse = await loginUser(email, password);
+    
+    // Create user object for auth context
+    const user: AuthUser = {
+      id: loginResponse.id,
+      email: loginResponse.email,
+      emailVerified: loginResponse.emailVerified,
+      hasStudentProfile: loginResponse.hasStudentProfile,
+      hasTutorProfile: loginResponse.hasTutorProfile,
+      studentProfile: loginResponse.studentProfile || null,
+      tutorProfile: loginResponse.tutorProfile || null,
+    };
+    
+    // Update auth context
+    auth.setUser(user);
+    
+    // Success message (optional)
+    Alert.alert('Success', 'Logged in successfully!');
+    
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Could not log in. Please try again.';
+    Alert.alert('Login Failed', errorMessage);
+  } finally {
     setLoading(false);
   }
+}
 
   async function handleSignup() {
     if (firstName === '' || lastName === '' || email === '' || password === '' || major === '') {
