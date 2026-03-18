@@ -1,4 +1,3 @@
-// Profile controller to handle profile-related endpoints for both students and tutors
 package com.peertutor.controller;
 
 import com.peertutor.dto.*;
@@ -32,7 +31,7 @@ public class ProfileController {
             @PathVariable UUID userId,
             @Valid @RequestBody StudentProfileUpdateRequest request) {
         try {
-            ProfileResponse.StudentProfileDto updated = 
+            StudentProfileDto updated = 
                 profileService.updateStudentProfile(userId, request);
             return ResponseEntity.ok(updated);
         } catch (IllegalStateException e) {
@@ -45,7 +44,7 @@ public class ProfileController {
             @PathVariable UUID userId,
             @Valid @RequestBody TutorProfileUpdateRequest request) {
         try {
-            ProfileResponse.TutorProfileDto updated = 
+            TutorProfileDto updated = 
                 profileService.updateTutorProfile(userId, request);
             return ResponseEntity.ok(updated);
         } catch (IllegalStateException e) {
@@ -58,7 +57,7 @@ public class ProfileController {
             @PathVariable UUID userId,
             @Valid @RequestBody StudentProfileUpdateRequest request) {
         try {
-            ProfileResponse.StudentProfileDto created = 
+            StudentProfileDto created = 
                 profileService.createStudentProfile(userId, request);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (IllegalStateException e) {
@@ -66,14 +65,34 @@ public class ProfileController {
         }
     }
 
-@PostMapping("/tutor/{userId}")
+    @PostMapping("/tutor/{userId}")
     public ResponseEntity<?> createTutorProfile(
             @PathVariable UUID userId,
             @Valid @RequestBody TutorProfileUpdateRequest request) {
         try {
-            ProfileResponse.TutorProfileDto created = 
+            TutorProfileDto created = 
                 profileService.createTutorProfile(userId, request);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/student/{userId}")
+    public ResponseEntity<?> deleteStudentProfile(@PathVariable UUID userId) {
+        try {
+            profileService.deleteStudentProfile(userId);
+            return ResponseEntity.ok("Student profile deleted successfully");
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/tutor/{userId}")
+    public ResponseEntity<?> deleteTutorProfile(@PathVariable UUID userId) {
+        try {
+            profileService.deleteTutorProfile(userId);
+            return ResponseEntity.ok("Tutor profile deleted successfully");
         } catch (IllegalStateException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

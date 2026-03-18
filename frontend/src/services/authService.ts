@@ -1,6 +1,6 @@
 import api from './api';
 
-// signupRequest.java on backend
+// Signup types
 export type SignupPayload = {
   firstName: string;
   lastName: string;
@@ -15,7 +15,6 @@ export type SignupPayload = {
   availableForInPerson: boolean;
 };
 
-// signupResponse.java on backend
 export type SignupResponseRaw = {
   id: string;
   firstName: string;
@@ -27,31 +26,93 @@ export type SignupResponseRaw = {
   message: string;
 };
 
-// calls POST /api/auth/signup
-export async function registerUser(payload: SignupPayload) {
-  const response = await api.post('/api/auth/signup', payload);
-  return response.data as SignupResponseRaw;
+// Login types
+export interface LoginRequest {
+  email: string;
+  password: string;
 }
 
-// calls GET /api/auth/check-email?email=xxx
-export async function checkEmailAvailable(email: string) {
-  const response = await api.get('/api/auth/check-email', {
-    params: { email: email },
-  });
-  return response.data.available as boolean;
+export interface LoginResponse {
+  token: string;
+  id: string;
+  email: string;
+  emailVerified: boolean;
+  hasStudentProfile: boolean;
+  hasTutorProfile: boolean;
+  studentProfile?: any;
+  tutorProfile?: any;
 }
 
-// calls GET /api/auth/verify?token=xxx
-export async function verifyEmail(token: string) {
-  const response = await api.get('/api/auth/verify', {
-    params: { token: token },
-  });
-  return response.data;
+// Email verification types
+export interface VerifyEmailResponse {
+  success: boolean;
+  message: string;
+  email?: string;
 }
 
-// TODO: setup when backend adds POST /api/auth/login
-export async function loginUser(email: string, password: string) {
-  // const response = await api.post('/api/auth/login', { email, password });
-  // return response.data;
-  throw new Error('LOGIN_NOT_IMPLEMENTED');
+// ============== API Functions ==============
+
+/**
+ * Register a new user (student or tutor)
+ * POST /api/auth/signup
+ */
+export async function registerUser(payload: SignupPayload): Promise<SignupResponseRaw> {
+  try {
+    const response = await api.post('/auth/signup', payload);  // Removed /api since baseURL has it
+    return response.data as SignupResponseRaw;
+  } catch (error) {
+    console.error('Registration failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Check if email is already registered
+ * GET /api/auth/check-email?email=xxx
+ */
+export async function checkEmailAvailable(email: string): Promise<boolean> {
+  try {
+    const response = await api.get('/auth/check-email', {
+      params: { email },
+    });
+    return response.data.available as boolean;
+  } catch (error) {
+    console.error('Email check failed:', error);
+    return false; // Assume email is not available if check fails
+  }
+}
+
+/**
+ * Verify user email with token
+ * GET /api/auth/verify?token=xxx
+ */
+export async function verifyEmail(token: string): Promise<VerifyEmailResponse> {
+  try {
+    const response = await api.get('/auth/verify', {
+      params: { token },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Email verification failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Login user
+ * POST /api/auth/login
+ */
+export async function loginUser(email: string, password: string): Promise<LoginResponse> {
+  try {
+    const response = await api.post('/auth/login', {
+      email,
+      password
+    });
+    return response.data;
+  } catch (error: any) {
+    if (error.response) {
+      throw new Error(error.response.data.message || 'Login failed');
+    }
+    throw new Error('Network error. Please try again.');
+  }
 }
