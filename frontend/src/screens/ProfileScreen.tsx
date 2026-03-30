@@ -45,10 +45,10 @@ function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Courses Offered</Text>
           <View style={styles.courseRow}>
-            {tp.coursesOffered.map(function(course: string) {
+            {tp.coursesOffered.map(function(course) {
               return (
-                <View key={course} style={styles.courseTag}>
-                  <Text style={styles.courseText}>{course}</Text>
+                <View key={String(course.id)} style={styles.courseTag}>
+                  <Text style={styles.courseText}>{course.courseNumber}</Text>
                 </View>
               );
             })}

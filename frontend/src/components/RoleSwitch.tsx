@@ -1,50 +1,54 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, Alert } from 'react-native';
+import {
+  View, Text, TouchableOpacity, ActivityIndicator,
+  StyleSheet, Alert, TextInput, ScrollView,
+} from 'react-native';
 import { COLORS } from '../constants/colors';
 import { useAuth } from '../context/AuthContext';
-import { getUserProfiles } from '../services/profileService';
+import { createTutorProfile, createStudentProfile, getUserProfiles } from '../services/profileService';
+import CoursePicker from './CoursePicker';
+
+type FormView = 'none' | 'addTutor' | 'addStudent';
 
 function RoleSwitch() {
   const auth = useAuth();
   const [loading, setLoading] = useState(false);
+  const [formView, setFormView] = useState<FormView>('none');
 
-  // If nobody is logged in, show nothing
+  // Tutor form fields
+  const [hourlyRate, setHourlyRate] = useState('');
+  const [selectedCourseIds, setSelectedCourseIds] = useState<number[]>([]);
+  const [onlineAvail, setOnlineAvail] = useState(false);
+  const [inPersonAvail, setInPersonAvail] = useState(false);
+  const [major, setMajor] = useState('');
+
+  // Student form fields
+  const [gradYear, setGradYear] = useState('');
+  const [studentMajor, setStudentMajor] = useState('');
+
   if (auth.user.id === '') {
     return null;
   }
 
-  // If the user has both profiles, show the toggle
+  // Both profiles exist — show toggle
   if (auth.user.hasStudentProfile && auth.user.hasTutorProfile) {
     return (
       <View style={styles.container}>
         <Text style={styles.label}>Switch Role</Text>
         <View style={styles.toggle}>
           <TouchableOpacity
-            style={[
-              styles.option,
-              auth.activeRole === 'STUDENT' && styles.activeOption,
-            ]}
+            style={[styles.option, auth.activeRole === 'STUDENT' && styles.activeOption]}
             onPress={function() { auth.setActiveRole('STUDENT'); }}
           >
-            <Text style={[
-              styles.optionText,
-              auth.activeRole === 'STUDENT' && styles.activeText,
-            ]}>
+            <Text style={[styles.optionText, auth.activeRole === 'STUDENT' && styles.activeText]}>
               Student
             </Text>
           </TouchableOpacity>
-
           <TouchableOpacity
-            style={[
-              styles.option,
-              auth.activeRole === 'TUTOR' && styles.activeOption,
-            ]}
+            style={[styles.option, auth.activeRole === 'TUTOR' && styles.activeOption]}
             onPress={function() { auth.setActiveRole('TUTOR'); }}
           >
-            <Text style={[
-              styles.optionText,
-              auth.activeRole === 'TUTOR' && styles.activeText,
-            ]}>
+            <Text style={[styles.optionText, auth.activeRole === 'TUTOR' && styles.activeText]}>
               Tutor
             </Text>
           </TouchableOpacity>
@@ -53,21 +57,36 @@ function RoleSwitch() {
     );
   }
 
-  // If only one profile exists, show badge and option to add the other
-  let currentRoleLabel = '';
-  let addRoleLabel = '';
+  async function handleAddTutorProfile() {
+    const parsedRate = parseFloat(hourlyRate);
+    if (Number.isNaN(parsedRate) || parsedRate <= 0) {
+      Alert.alert('Invalid Rate', 'Please enter a valid hourly rate.');
+      return;
+    }
+    if (selectedCourseIds.length === 0) {
+      Alert.alert('Missing Courses', 'Please select at least one course.');
+      return;
+    }
+    if (major.trim() === '') {
+      Alert.alert('Missing Major', 'Please enter your major.');
+      return;
+    }
 
-  if (auth.user.hasStudentProfile) {
-    currentRoleLabel = 'Student';
-    addRoleLabel = 'Add Tutor Profile';
-  } else {
-    currentRoleLabel = 'Tutor';
-    addRoleLabel = 'Add Student Profile';
-  }
-
-  async function handleAddProfile() {
     setLoading(true);
     try {
+      const payload = {
+        firstName: auth.user.studentProfile ? auth.user.studentProfile.firstName : '',
+        lastName: auth.user.studentProfile ? auth.user.studentProfile.lastName : '',
+        major: major,
+        hourlyRate: parsedRate,
+        courseIds: selectedCourseIds,
+        availableForOnline: onlineAvail,
+        availableForInPerson: inPersonAvail,
+      };
+
+      await createTutorProfile(auth.user.id, payload);
+
+      // Refresh profiles from backend
       const profiles = await getUserProfiles(auth.user.id);
       const updated = {
         id: auth.user.id,
@@ -78,12 +97,187 @@ function RoleSwitch() {
         studentProfile: profiles.studentProfile,
         tutorProfile: profiles.tutorProfile,
       };
-      auth.setUser(updated);
-      Alert.alert('Profile Added', 'Your new profile has been added.');
+      auth.setUser(updated, auth.token);
+      setFormView('none');
+      Alert.alert('Tutor Profile Added', 'You can now switch to Tutor mode.');
     } catch (err) {
-      Alert.alert('Error', 'Could not load profiles. Please try again.');
+      Alert.alert('Error', 'Could not create tutor profile. Please try again.');
     }
     setLoading(false);
+  }
+
+  async function handleAddStudentProfile() {
+    const parsedYear = parseInt(gradYear, 10);
+    if (Number.isNaN(parsedYear) || parsedYear < 2024) {
+      Alert.alert('Invalid Year', 'Please enter a valid graduation year.');
+      return;
+    }
+    if (studentMajor.trim() === '') {
+      Alert.alert('Missing Major', 'Please enter your major.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const payload = {
+        firstName: auth.user.tutorProfile ? auth.user.tutorProfile.firstName : '',
+        lastName: auth.user.tutorProfile ? auth.user.tutorProfile.lastName : '',
+        major: studentMajor,
+        expectedGraduation: parsedYear,
+      };
+
+      await createStudentProfile(auth.user.id, payload);
+
+      const profiles = await getUserProfiles(auth.user.id);
+      const updated = {
+        id: auth.user.id,
+        email: auth.user.email,
+        emailVerified: auth.user.emailVerified,
+        hasStudentProfile: profiles.studentProfileExists,
+        hasTutorProfile: profiles.tutorProfileExists,
+        studentProfile: profiles.studentProfile,
+        tutorProfile: profiles.tutorProfile,
+      };
+      auth.setUser(updated, auth.token);
+      setFormView('none');
+      Alert.alert('Student Profile Added', 'You can now switch to Student mode.');
+    } catch (err) {
+      Alert.alert('Error', 'Could not create student profile. Please try again.');
+    }
+    setLoading(false);
+  }
+
+  // Show add tutor form
+  if (formView === 'addTutor') {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.formTitle}>Set Up Tutor Profile</Text>
+
+        <Text style={styles.fieldLabel}>Major</Text>
+        <TextInput
+          style={styles.input}
+          value={major}
+          onChangeText={setMajor}
+          placeholder="e.g. Information Technology"
+          placeholderTextColor={COLORS.darkGray}
+        />
+
+        <Text style={styles.fieldLabel}>Hourly Rate ($)</Text>
+        <TextInput
+          style={styles.input}
+          value={hourlyRate}
+          onChangeText={setHourlyRate}
+          placeholder="e.g. 15"
+          placeholderTextColor={COLORS.darkGray}
+          keyboardType="numeric"
+        />
+
+        <Text style={styles.fieldLabel}>Courses You Can Tutor</Text>
+        <CoursePicker
+          selectedIds={selectedCourseIds}
+          onSelectionChange={setSelectedCourseIds}
+        />
+
+        <Text style={styles.fieldLabel}>Availability</Text>
+        <View style={styles.checkRow}>
+          <TouchableOpacity
+            style={[styles.checkbox, onlineAvail && styles.checkboxActive]}
+            onPress={function() { setOnlineAvail(!onlineAvail); }}
+          >
+            <Text style={[styles.checkboxText, onlineAvail && styles.checkboxActiveText]}>
+              Online
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.checkbox, inPersonAvail && styles.checkboxActive]}
+            onPress={function() { setInPersonAvail(!inPersonAvail); }}
+          >
+            <Text style={[styles.checkboxText, inPersonAvail && styles.checkboxActiveText]}>
+              In-Person
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.formBtns}>
+          {loading ? (
+            <ActivityIndicator color={COLORS.red} />
+          ) : (
+            <>
+              <TouchableOpacity style={styles.primaryBtn} onPress={handleAddTutorProfile}>
+                <Text style={styles.primaryBtnText}>Create Tutor Profile</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={function() { setFormView('none'); }}
+              >
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </View>
+    );
+  }
+
+  // Show add student form
+  if (formView === 'addStudent') {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.formTitle}>Set Up Student Profile</Text>
+
+        <Text style={styles.fieldLabel}>Major</Text>
+        <TextInput
+          style={styles.input}
+          value={studentMajor}
+          onChangeText={setStudentMajor}
+          placeholder="e.g. Information Technology"
+          placeholderTextColor={COLORS.darkGray}
+        />
+
+        <Text style={styles.fieldLabel}>Expected Graduation Year</Text>
+        <TextInput
+          style={styles.input}
+          value={gradYear}
+          onChangeText={setGradYear}
+          placeholder="e.g. 2027"
+          placeholderTextColor={COLORS.darkGray}
+          keyboardType="numeric"
+        />
+
+        <View style={styles.formBtns}>
+          {loading ? (
+            <ActivityIndicator color={COLORS.red} />
+          ) : (
+            <>
+              <TouchableOpacity style={styles.primaryBtn} onPress={handleAddStudentProfile}>
+                <Text style={styles.primaryBtnText}>Create Student Profile</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={function() { setFormView('none'); }}
+              >
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </View>
+    );
+  }
+
+  // Default — show current role badge and add button
+  let currentRoleLabel = '';
+  let addRoleLabel = '';
+  let targetForm: FormView = 'none';
+
+  if (auth.user.hasStudentProfile) {
+    currentRoleLabel = 'Student';
+    addRoleLabel = 'Add Tutor Profile';
+    targetForm = 'addTutor';
+  } else {
+    currentRoleLabel = 'Tutor';
+    addRoleLabel = 'Add Student Profile';
+    targetForm = 'addStudent';
   }
 
   return (
@@ -93,13 +287,9 @@ function RoleSwitch() {
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{currentRoleLabel}</Text>
         </View>
-        {loading ? (
-          <ActivityIndicator color={COLORS.red} />
-        ) : (
-          <TouchableOpacity onPress={handleAddProfile}>
-            <Text style={styles.addLink}>{addRoleLabel}</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity onPress={function() { setFormView(targetForm); }}>
+          <Text style={styles.addLink}>{addRoleLabel}</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -107,13 +297,19 @@ function RoleSwitch() {
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 8,
+    marginVertical: 4,
   },
   label: {
     fontSize: 13,
     color: COLORS.darkGray,
     marginBottom: 8,
     fontWeight: '500',
+  },
+  formTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.black,
+    marginBottom: 4,
   },
   toggle: {
     flexDirection: 'row',
@@ -164,6 +360,74 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 13,
     textDecorationLine: 'underline',
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.black,
+    marginBottom: 6,
+    marginTop: 12,
+  },
+  input: {
+    backgroundColor: COLORS.lightGray,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: COLORS.black,
+    borderWidth: 1,
+    borderColor: COLORS.medGray,
+  },
+  checkRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  checkbox: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: COLORS.medGray,
+  },
+  checkboxActive: {
+    borderColor: COLORS.red,
+    backgroundColor: '#FEE2E6',
+  },
+  checkboxText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.darkGray,
+  },
+  checkboxActiveText: {
+    color: COLORS.red,
+  },
+  formBtns: {
+    marginTop: 20,
+    gap: 10,
+  },
+  primaryBtn: {
+    backgroundColor: COLORS.red,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  primaryBtnText: {
+    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  cancelBtn: {
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: COLORS.medGray,
+  },
+  cancelBtnText: {
+    color: COLORS.darkGray,
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
 

@@ -3,8 +3,9 @@ import axios from 'axios';
 // Android emulator uses 10.0.2.2 to reach your computer's localhost
 // If using iOS simulator change this to: http://localhost:8080
 // If using a physical device change this to your computer's local IP address
-const BASE_URL = 'http://localhost:8080';
-//'http://10.0.2.2:8080';
+const BASE_URL = 
+//'http://localhost:8080'; 
+'http://10.0.2.2:8080'; //android
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -13,6 +14,26 @@ const api = axios.create({
   },
   timeout: 10000,
 });
+
+// Store token in memory so the interceptor can access it
+let authToken: string | null = null;
+
+export function setAuthToken(token: string | null) {
+  authToken = token;
+}
+
+// Attach JWT token to every request if available
+api.interceptors.request.use(
+  function(config) {
+    if (authToken !== null) {
+      config.headers['Authorization'] = 'Bearer ' + authToken;
+    }
+    return config;
+  },
+  function(error) {
+    return Promise.reject(error);
+  }
+);
 
 api.interceptors.response.use(
   function(response) {

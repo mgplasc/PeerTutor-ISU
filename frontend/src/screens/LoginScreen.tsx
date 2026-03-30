@@ -5,12 +5,18 @@ import {
 } from 'react-native';
 import { COLORS } from '../constants/colors';
 import { registerUser, checkEmailAvailable, loginUser } from '../services/authService';
-import { getUserProfiles } from '../services/profileService';
 import { AuthUser, useAuth } from '../context/AuthContext';
+import CoursePicker from '../components/CoursePicker';
 
 type Mode = 'login' | 'signup-student' | 'signup-tutor';
 
-function LoginScreen() {
+type LoginScreenProps = {
+  navigation: {
+    navigate: (screen: string) => void;
+  };
+};
+
+function LoginScreen({ navigation }: LoginScreenProps) {
   const auth = useAuth();
   const [mode, setMode] = useState<Mode>('login');
   const [loading, setLoading] = useState(false);
@@ -29,50 +35,43 @@ function LoginScreen() {
 
   // tutor-only
   const [hourlyRate, setHourlyRate] = useState('');
-  const [courses, setCourses] = useState('');
+  const [selectedCourseIds, setSelectedCourseIds] = useState<number[]>([]);
   const [onlineAvail, setOnlineAvail] = useState(false);
   const [inPersonAvail, setInPersonAvail] = useState(false);
 
   async function handleLogin() {
-  if (email === '' || password === '') {
-    Alert.alert('Missing Fields', 'Please enter your email and password.');
-    return;
-  }
+    if (email === '' || password === '') {
+      Alert.alert('Missing Fields', 'Please enter your email and password.');
+      return;
+    }
+    if (!email.endsWith('@ilstu.edu')) {
+      Alert.alert('Invalid Email', 'You must use an @ilstu.edu email address.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const loginResponse = await loginUser(email, password);
 
-  if (!email.endsWith('@ilstu.edu')) {
-    Alert.alert('Invalid Email', 'You must use an @ilstu.edu email address.');
-    return;
-  }
+      const user: AuthUser = {
+        id: loginResponse.id,
+        email: loginResponse.email,
+        emailVerified: loginResponse.emailVerified,
+        hasStudentProfile: loginResponse.hasStudentProfile,
+        hasTutorProfile: loginResponse.hasTutorProfile,
+        studentProfile: loginResponse.studentProfile || null,
+        tutorProfile: loginResponse.tutorProfile || null,
+      };
 
-  setLoading(true);
-  try {
-    // Call the login API
-    const loginResponse = await loginUser(email, password);
-    
-    // Create user object for auth context
-    const user: AuthUser = {
-      id: loginResponse.id,
-      email: loginResponse.email,
-      emailVerified: loginResponse.emailVerified,
-      hasStudentProfile: loginResponse.hasStudentProfile,
-      hasTutorProfile: loginResponse.hasTutorProfile,
-      studentProfile: loginResponse.studentProfile || null,
-      tutorProfile: loginResponse.tutorProfile || null,
-    };
-    
-    // Update auth context
-    auth.setUser(user);
-    
-    // Success message (optional)
-    Alert.alert('Success', 'Logged in successfully!');
-    
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : 'Could not log in. Please try again.';
-    Alert.alert('Login Failed', errorMessage);
-  } finally {
-    setLoading(false);
+      // Pass token as second argument so it gets stored and sent with future requests
+      auth.setUser(user, loginResponse.token);
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Could not log in. Please try again.';
+      Alert.alert('Login Failed', errorMessage);
+    } finally {
+      setLoading(false);
+    }
   }
-}
 
   async function handleSignup() {
     if (firstName === '' || lastName === '' || email === '' || password === '' || major === '') {
@@ -106,8 +105,6 @@ function LoginScreen() {
       const parsedRate = parseFloat(hourlyRate);
       const resolvedHourlyRate = Number.isNaN(parsedRate) ? 0 : parsedRate;
 
-      const courseList = courses.split(',').map(function(c) { return c.trim(); });
-
       const payload = {
         firstName: firstName,
         lastName: lastName,
@@ -117,25 +114,24 @@ function LoginScreen() {
         major: major,
         expectedGraduation: expectedGraduation,
         hourlyRate: resolvedHourlyRate,
-        coursesOffered: courseList,
+        courseIds: selectedCourseIds,
         availableForOnline: onlineAvail,
         availableForInPerson: inPersonAvail,
       };
 
       const signupResult = await registerUser(payload);
 
-      const profiles = await getUserProfiles(signupResult.id);
-
-      const newUser = {
+      const newUser: AuthUser = {
         id: signupResult.id,
         email: signupResult.email,
         emailVerified: signupResult.emailVerified,
         hasStudentProfile: signupResult.hasStudentProfile,
         hasTutorProfile: signupResult.hasTutorProfile,
-        studentProfile: profiles.studentProfile,
-        tutorProfile: profiles.tutorProfile,
+        studentProfile: signupResult.studentProfile || null,
+        tutorProfile: signupResult.tutorProfile || null,
       };
 
+      // No token on signup — user must log in after verifying email
       auth.setUser(newUser);
 
       Alert.alert(
@@ -188,7 +184,7 @@ function LoginScreen() {
           style={styles.input}
           value={firstName}
           onChangeText={setFirstName}
-          placeholder="First name"
+          placeholder="First Name"
           placeholderTextColor={COLORS.darkGray}
         />
         <Text style={styles.fieldLabel}>Last Name</Text>
@@ -196,7 +192,7 @@ function LoginScreen() {
           style={styles.input}
           value={lastName}
           onChangeText={setLastName}
-          placeholder="Last name"
+          placeholder="Last Name"
           placeholderTextColor={COLORS.darkGray}
         />
         <Text style={styles.fieldLabel}>Major</Text>
@@ -228,7 +224,7 @@ function LoginScreen() {
               style={styles.input}
               value={email}
               onChangeText={setEmail}
-              placeholder="you@ilstu.edu"
+              placeholder="ULID@ilstu.edu"
               placeholderTextColor={COLORS.darkGray}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -242,6 +238,12 @@ function LoginScreen() {
               placeholderTextColor={COLORS.darkGray}
               secureTextEntry={true}
             />
+            <TouchableOpacity
+              style={styles.forgotLink}
+              onPress={function() { navigation.navigate('ForgotPassword'); }}
+            >
+              <Text style={styles.forgotLinkText}>Forgot password?</Text>
+            </TouchableOpacity>
             {loading ? (
               <ActivityIndicator color={COLORS.red} style={styles.spinner} />
             ) : (
@@ -269,7 +271,7 @@ function LoginScreen() {
               style={styles.input}
               value={email}
               onChangeText={setEmail}
-              placeholder="you@ilstu.edu"
+              placeholder="ULID@ilstu.edu"
               placeholderTextColor={COLORS.darkGray}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -305,13 +307,10 @@ function LoginScreen() {
               placeholderTextColor={COLORS.darkGray}
               keyboardType="numeric"
             />
-            <Text style={styles.fieldLabel}>Courses You Can Tutor (comma separated)</Text>
-            <TextInput
-              style={styles.input}
-              value={courses}
-              onChangeText={setCourses}
-              placeholder="e.g. IT 168, IT 279"
-              placeholderTextColor={COLORS.darkGray}
+            <Text style={styles.fieldLabel}>Courses You Can Tutor</Text>
+            <CoursePicker
+              selectedIds={selectedCourseIds}
+              onSelectionChange={setSelectedCourseIds}
             />
             <Text style={styles.fieldLabel}>Availability</Text>
             <View style={styles.checkRow}>
@@ -337,7 +336,7 @@ function LoginScreen() {
               style={styles.input}
               value={email}
               onChangeText={setEmail}
-              placeholder="you@ilstu.edu"
+              placeholder="ULID@ilstu.edu"
               placeholderTextColor={COLORS.darkGray}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -444,6 +443,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.medGray,
   },
+  forgotLink: {
+    alignSelf: 'flex-end',
+    marginTop: 8,
+    marginBottom: 4,
+    paddingVertical: 4,
+  },
+  forgotLinkText: {
+    fontSize: 13,
+    color: COLORS.red,
+    fontWeight: '600',
+  },
   checkRow: {
     flexDirection: 'row',
     gap: 10,
@@ -486,3 +496,4 @@ const styles = StyleSheet.create({
 });
 
 export default LoginScreen;
+

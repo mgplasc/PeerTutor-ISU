@@ -116,3 +116,28 @@ export async function loginUser(email: string, password: string): Promise<LoginR
     throw new Error('Network error. Please try again.');
   }
 }
+/**
+ * Send password reset email
+ * POST /auth/forgot-password
+ */
+export async function forgotPassword(email: string): Promise<void> {
+  try {
+    await api.post('/auth/forgot-password', { email });
+  } catch (error) {
+    console.error('Forgot password request failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Reset password using token from email link
+ * POST /auth/reset-password
+ */
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  try {
+    await api.post('/auth/reset-password', { token, newPassword });
+  } catch (error) {
+    console.error('Password reset failed:', error);
+    throw error;
+  }
+}

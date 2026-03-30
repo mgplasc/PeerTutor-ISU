@@ -45,11 +45,15 @@ public class SecurityConfig {
                 .requestMatchers("/auth/verify").permitAll()
                 .requestMatchers("/auth/verify-email/**").permitAll()
                 .requestMatchers("/auth/password/**").permitAll()
+                .requestMatchers("/auth/forgot-password").permitAll()
+                .requestMatchers("/auth/reset-password").permitAll()
+                .requestMatchers("/auth/reset-password-form").permitAll()
                 // Also allow with /api prefix
                 .requestMatchers("/api/auth/signup").permitAll()
                 .requestMatchers("/api/auth/login").permitAll()
                 .requestMatchers("/api/auth/check-email").permitAll()
                 .requestMatchers("/api/auth/verify").permitAll()
+                .requestMatchers("/api/courses").permitAll()
                 // All other endpoints require authentication
                 .anyRequest().authenticated()
             )

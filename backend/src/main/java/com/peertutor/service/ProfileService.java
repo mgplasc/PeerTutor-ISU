@@ -139,7 +139,7 @@ public class ProfileService {
         // Create new student profile
         StudentProfile profile = new StudentProfile();
         profile.setUser(user);
-        profile.setId(user.getId()); // MapsId will handle this
+        //profile.setId(user.getId()); // MapsId will handle this
         
         // Update common fields in User entity if provided
         if (request.getFirstName() != null) {
@@ -179,7 +179,7 @@ public class ProfileService {
         // Create new tutor profile
         TutorProfile profile = new TutorProfile();
         profile.setUser(user);
-        profile.setId(user.getId()); // MapsId will handle this
+        //profile.setId(user.getId()); // MapsId will handle this
         
         // Update common fields in User entity if provided
         if (request.getFirstName() != null) {
