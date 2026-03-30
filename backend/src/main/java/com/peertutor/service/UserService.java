@@ -19,6 +19,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.peertutor.model.PasswordResetToken;
+import com.peertutor.repository.PasswordResetTokenRepository;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -51,6 +53,9 @@ public class UserService {
 
     @Autowired
     private CourseRepository courseRepository;
+
+    @Autowired
+    private PasswordResetTokenRepository passwordResetTokenRepository;
 
     // ============ AUTHENTICATION METHODS ============
 
@@ -157,7 +162,7 @@ public class UserService {
     private void createStudentProfile(User user, SignupRequest request) {
         StudentProfile profile = new StudentProfile();
         profile.setUser(user);
-        profile.setId(user.getId()); // MapsId will handle this
+        //profile.setId(user.getId()); // MapsId will handle this
         
         // Set fields on the profile, not on User
         profile.setFirstName(request.getFirstName());
@@ -172,7 +177,7 @@ public class UserService {
     private void createTutorProfile(User user, SignupRequest request) {
         TutorProfile profile = new TutorProfile();
         profile.setUser(user);
-        profile.setId(user.getId()); // MapsId will handle this
+        //profile.setId(user.getId()); // MapsId will handle this
         
         // Set fields on the profile, not on User
         profile.setFirstName(request.getFirstName());
@@ -218,7 +223,7 @@ public class UserService {
     private ProfileResponse createStudentProfileFromAddRequest(User user, AddProfileRequest request) {
         StudentProfile profile = new StudentProfile();
         profile.setUser(user);
-        profile.setId(user.getId()); // MapsId will handle this
+        //profile.setId(user.getId()); // MapsId will handle this
         
         // Set fields on the profile
         profile.setFirstName(request.getFirstName());
@@ -236,7 +241,7 @@ public class UserService {
     private ProfileResponse createTutorProfileFromAddRequest(User user, AddProfileRequest request) {
         TutorProfile profile = new TutorProfile();
         profile.setUser(user);
-        profile.setId(user.getId()); // MapsId will handle this
+        //profile.setId(user.getId()); // MapsId will handle this
         
         // Set fields on the profile
 
@@ -403,5 +408,63 @@ public class UserService {
         
         tutorProfileRepository.save(profile);
         return new TutorProfileDto(profile);
+    }
+
+    // send password reset email to user
+    @Transactional
+    public void sendPasswordResetEmail(String email) {
+        Optional<User> userOptional = userRepository.findByEmail(email.toLowerCase());
+
+        if (userOptional.isEmpty()) {
+            // do not reveal if the email is registered
+            return;
+        }
+
+        User user = userOptional.get();
+
+        // delete any existing reset token for this user
+        passwordResetTokenRepository.deleteByUser(user);
+
+        // create and save a new reset token
+        PasswordResetToken resetToken = new PasswordResetToken(user);
+        passwordResetTokenRepository.save(resetToken);
+
+        // send reset email
+        emailService.sendPasswordResetEmail(user.getEmail(), resetToken.getToken());
+    }
+
+    // Reset password using token from email link
+    @Transactional
+    public void resetPassword(String token, String newPassword) {
+        Optional<PasswordResetToken> tokenOptional = passwordResetTokenRepository.findByToken(token);
+
+        if (tokenOptional.isEmpty()) {
+            throw new RuntimeException("Invalid or expired reset link");
+        }
+
+        PasswordResetToken resetToken = tokenOptional.get();
+
+        if (resetToken.isExpired()) {
+            throw new RuntimeException("Reset link has expired. Please request a new one.");
+        }
+
+        User user = resetToken.getUser();
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        // delete so can't reuse
+        passwordResetTokenRepository.delete(resetToken);
+
+        // send confirmation email of change
+        emailService.sendPasswordResetConfirmationEmail(user.getEmail());
+    }
+    // check if a reset token exists and is not expired (used by the web form)
+    @Transactional(readOnly = true)
+    public boolean isResetTokenValid(String token) {
+        Optional<PasswordResetToken> tokenOptional = passwordResetTokenRepository.findByToken(token);
+        if (tokenOptional.isEmpty()) {
+            return false;
+        }
+        return !tokenOptional.get().isExpired();
     }
 }
