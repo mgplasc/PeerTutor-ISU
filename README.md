@@ -25,7 +25,9 @@ IT 391 Spring 2026
 
 **Tech Stack**:
   Frontend: React Native (TypeScript, CSS)
+  
   Backend: Spring Boot + Maven (Java REST API)
+  
   Database: PostgreSQL
   
 **Prerequisites**:
