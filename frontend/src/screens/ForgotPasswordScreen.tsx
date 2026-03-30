@@ -78,7 +78,7 @@ function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) {
           style={styles.input}
           value={email}
           onChangeText={setEmail}
-          placeholder="you@ilstu.edu"
+          placeholder="ULID@ilstu.edu"
           placeholderTextColor={COLORS.darkGray}
           keyboardType="email-address"
           autoCapitalize="none"
