@@ -1,12 +1,32 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { COLORS } from '../constants/colors';
 import Avatar from '../components/Avatar';
 import StarRating from '../components/StarRating';
 import Tag from '../components/Tag';
+import { getTutorById } from '../services/tutorService';
 
+// Define the param list for the stack that includes TutorProfile
+type HomeStackParamList = {
+  Home: undefined;
+  TutorProfile: { tutorId: string };
+  Booking: { tutor: Tutor };
+  Confirmation: undefined;
+  // add other screens in this stack if needed
+};
+
+// Use the correct props type for a native stack screen
+type TutorProfileScreenProps = NativeStackScreenProps<HomeStackParamList, 'TutorProfile'>;
+
+// Tutor type (can be moved to a shared types file)
 type Tutor = {
   id: string;
   firstName: string;
@@ -24,42 +44,74 @@ type Tutor = {
   year: string;
 };
 
-type TutorProfileScreenProps = {
-  route: {
-    params: {
-      tutor: Tutor;
-    };
-  };
-  navigation: {
-    navigate: (screen: string, params: object) => void;
-  };
-};
-
 function TutorProfileScreen({ route, navigation }: TutorProfileScreenProps) {
-  const tutor = route.params.tutor;
-  const name = tutor.firstName + ' ' + tutor.lastName;
+  const { tutorId } = route.params;
+  const [tutor, setTutor] = useState<Tutor | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchTutor() {
+      try {
+        const data = await getTutorById(tutorId);
+        setTutor(data);
+      } catch (err) {
+        console.error('Failed to fetch tutor:', err);
+        setError('Could not load tutor details. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchTutor();
+  }, [tutorId]);
+
+  if (loading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color={COLORS.red} />
+      </View>
+    );
+  }
+
+  if (error || !tutor) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>{error || 'Tutor not found.'}</Text>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.retryButtonText}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const name = `${tutor.firstName} ${tutor.lastName}`;
 
   let modeTagType = 'blue';
-  if (tutor.mode === 'In-Person') {
-    modeTagType = 'green';
-  } else if (tutor.mode === 'Both') {
-    modeTagType = 'yellow';
-  }
+  if (tutor.mode === 'In-Person') modeTagType = 'green';
+  else if (tutor.mode === 'Both') modeTagType = 'yellow';
 
-  const availabilityTag = tutor.available
-    ? <Tag text="Available" type="green" />
-    : <Tag text="Unavailable" type="red" />;
+  const availabilityTag = tutor.available ? (
+    <Tag text="Available" type="green" />
+  ) : (
+    <Tag text="Unavailable" type="red" />
+  );
 
-  function handleBook() {
-    navigation.navigate('Booking', { tutor: tutor });
-  }
+  const handleBook = () => {
+    navigation.navigate('Booking', { tutor });
+  };
 
   return (
     <ScrollView style={styles.screen}>
       <View style={styles.heroCard}>
         <Avatar initials={tutor.avatar} bg={tutor.avatarBg} size={80} />
         <Text style={styles.name}>{name}</Text>
-        <Text style={styles.year}>{tutor.year} · {tutor.major}</Text>
+        <Text style={styles.year}>
+          {tutor.year} · {tutor.major}
+        </Text>
         <View style={styles.tagRow}>
           <Tag text={tutor.mode} type={modeTagType} />
           {availabilityTag}
@@ -71,20 +123,17 @@ function TutorProfileScreen({ route, navigation }: TutorProfileScreenProps) {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>About</Text>
-        <Text style={styles.bio}>{tutor.bio}</Text>
+        <Text style={styles.bio}>{tutor.bio || 'No bio provided yet.'}</Text>
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Courses</Text>
-        {/* TODO: Replace with tutor.coursesOffered from backend */}
         <View style={styles.courseList}>
-          {tutor.courses.map(function(course: string) {
-            return (
-              <View key={course} style={styles.courseTag}>
-                <Text style={styles.courseText}>{course}</Text>
-              </View>
-            );
-          })}
+          {tutor.courses.map((course) => (
+            <View key={course} style={styles.courseTag}>
+              <Text style={styles.courseText}>{course}</Text>
+            </View>
+          ))}
         </View>
       </View>
 
@@ -105,6 +154,28 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: COLORS.lightGray,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: COLORS.darkGray,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: COLORS.red,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: COLORS.white,
+    fontWeight: '600',
   },
   heroCard: {
     backgroundColor: COLORS.white,
