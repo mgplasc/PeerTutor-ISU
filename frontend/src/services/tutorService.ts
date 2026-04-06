@@ -38,10 +38,7 @@ function mapTutor(dto: any) {
     available: true,
     avatar:    initials,
     avatarBg:  getAvatarColor(dto.id),
-    //For profile screen 
-    major:      dto.major || '',
-    bio: dto.bio || '',
-    year: dto.year || '',
+    year:      dto.major || '',
   };
 }
 
