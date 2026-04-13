@@ -1,26 +1,54 @@
-import { MOCK_SESSIONS, MOCK_TUTORS } from '../constants/mockData';
+import api from './api';
 
-// TODO: replace with API calls when backend session endpoints are built
-// POST /api/sessions
-// GET  /api/sessions?userId=
+export type SessionDto = {
+  id: string;
+  studentId: string;
+  studentFirstName: string;
+  studentLastName: string;
+  tutorId: string;
+  tutorFirstName: string;
+  tutorLastName: string;
+  courseNumber: string;
+  sessionDate: string;
+  sessionTime: string;
+  mode: string;
+  status: string;
+  createdAt: string;
+};
 
-export async function getSessionsForUser(userId: string) {
-  await new Promise(function(resolve) { setTimeout(resolve, 300); });
+export type BookSessionPayload = {
+  tutorId: string;
+  courseNumber: string;
+  sessionDate: string;
+  sessionTime: string;
+  mode: string;
+};
 
-  return MOCK_SESSIONS.map(function(session) {
-    return {
-      id: session.id,
-      tutor: MOCK_TUTORS[session.tutorIndex],
-      course: session.course,
-      date: session.date,
-      time: session.time,
-      mode: session.mode,
-      status: session.status,
-    };
-  });
+// GET /api/sessions — get all sessions for logged-in user
+export async function getSessionsForUser(userId: string): Promise<SessionDto[]> {
+  try {
+    const response = await api.get('/api/sessions');
+    return response.data as SessionDto[];
+  } catch (error) {
+    console.error('Failed to fetch sessions:', error);
+    return [];
+  }
 }
 
-export async function bookSession(payload: object) {
-  await new Promise(function(resolve) { setTimeout(resolve, 300); });
-  return { success: true };
+// POST /api/sessions — book a new session
+export async function bookSession(payload: BookSessionPayload): Promise<SessionDto> {
+  const response = await api.post('/api/sessions', payload);
+  return response.data as SessionDto;
+}
+
+// POST /api/sessions/:id/confirm — tutor confirms a session
+export async function confirmSession(sessionId: string): Promise<SessionDto> {
+  const response = await api.post('/api/sessions/' + sessionId + '/confirm');
+  return response.data as SessionDto;
+}
+
+// POST /api/sessions/:id/decline — tutor declines a session
+export async function declineSession(sessionId: string): Promise<SessionDto> {
+  const response = await api.post('/api/sessions/' + sessionId + '/decline');
+  return response.data as SessionDto;
 }
