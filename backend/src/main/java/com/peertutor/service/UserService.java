@@ -467,4 +467,12 @@ public class UserService {
         }
         return !tokenOptional.get().isExpired();
     }
+
+    @Transactional
+    public void updateDeviceToken(UUID userId, String deviceToken) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+        user.setDeviceToken(deviceToken);
+        userRepository.save(user);
+    }
 }

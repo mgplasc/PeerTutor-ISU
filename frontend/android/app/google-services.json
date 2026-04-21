@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "753466229674",
+    "project_id": "peertutor-isu",
+    "storage_bucket": "peertutor-isu.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:753466229674:android:84033bf3bd9a12c73861d3",
+        "android_client_info": {
+          "package_name": "com.isupeertutor"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAU9MuiHYBkM2zmrnttrCcig3rMcyl3qck"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

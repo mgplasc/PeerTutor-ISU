@@ -30,6 +30,9 @@ public class SessionService {
     @Autowired
     private MessageService messageService;
 
+    @Autowired
+    private NotificationService notificationService;
+
     // book a new session (creates with PENDING status)
     @Transactional
     public SessionDto bookSession(UUID studentId, BookSessionRequest request) {
@@ -49,6 +52,11 @@ public class SessionService {
         session.setStatus("PENDING");
 
         Session saved = sessionRepository.save(session);
+
+        // Notify the tutor of the new booking request
+        String studentName = student.getStudentProfile() != null ? student.getStudentProfile().getFullName() : "A student";
+        notificationService.notifyTutorBookingRequest(tutor, studentName, request.getCourseNumber());
+
         return new SessionDto(saved);
     }
 
@@ -80,6 +88,9 @@ public class SessionService {
         //open a conversation for this session
         messageService.openConversation(saved);
 
+        String tutorName = session.getTutor().getTutorProfile() != null ? session.getTutor().getTutorProfile().getFullName() : "A tutor";
+        notificationService.notifyStudentDecision(saved.getStudent(), true, tutorName, saved.getSessionTime().toString());
+
         return new SessionDto(saved);
     }
 
@@ -95,6 +106,10 @@ public class SessionService {
 
         session.setStatus("DECLINED");
         Session saved = sessionRepository.save(session);
+
+        String tutorName = session.getTutor().getTutorProfile() != null ? session.getTutor().getTutorProfile().getFullName() : "A tutor";
+        notificationService.notifyStudentDecision(saved.getStudent(), false, tutorName,null);
+
         return new SessionDto(saved);
     }
 

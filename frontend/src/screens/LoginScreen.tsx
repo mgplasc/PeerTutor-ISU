@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   ScrollView, StyleSheet, Alert, ActivityIndicator,
@@ -7,6 +7,9 @@ import { COLORS } from '../constants/colors';
 import { registerUser, checkEmailAvailable, loginUser } from '../services/authService';
 import { AuthUser, useAuth } from '../context/AuthContext';
 import CoursePicker from '../components/CoursePicker';
+import { requestUserPermission, registerDeviceToken} from '../utils/notifications';
+import api, { setAuthToken } from '../services/api';
+
 
 type Mode = 'login' | 'signup-student' | 'signup-tutor';
 
@@ -64,12 +67,25 @@ function LoginScreen({ navigation }: LoginScreenProps) {
 
       // Pass token as second argument so it gets stored and sent with future requests
       auth.setUser(user, loginResponse.token);
+      setAuthToken(loginResponse.token);
 
+      await setupPushNotifications();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Could not log in. Please try again.';
       Alert.alert('Login Failed', errorMessage);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function setupPushNotifications() {
+    try{
+      await requestUserPermission();
+      await registerDeviceToken(api);
+      console.log('Push notification setup complete');
+    }catch (error)
+    {
+      console.error('Error setting up push notifications:', error);
     }
   }
 
