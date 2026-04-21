@@ -32,6 +32,9 @@ public class User {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "device_token")
+    private String deviceToken;
+
     // Profile relationships
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private StudentProfile studentProfile;
@@ -82,6 +85,8 @@ public class User {
         }
     }
 
+    public String getDeviceToken() { return deviceToken; }
+    public void setDeviceToken(String deviceToken) { this.deviceToken = deviceToken; }
     // Helper methods
     public boolean hasStudentProfile() { return studentProfile != null; }
     public boolean hasTutorProfile() { return tutorProfile != null; }
