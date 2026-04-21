@@ -11,12 +11,6 @@ import { HomeStackParamList } from '../navigation/AppNavigator';
 
 type BookingScreenProps = NativeStackScreenProps<HomeStackParamList, 'Booking'>;
 
-// TODO: replace with real time slots from tutor's availability
-const TIME_SLOTS = ['9:00 AM', '10:00 AM', '11:00 AM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM'];
-
-// TODO: replace with generated dates based on tutor availability
-const DATES = ['Mon Mar 10', 'Tue Mar 11', 'Wed Mar 12', 'Thu Mar 13', 'Fri Mar 14'];
-
 type Tutor = {
   id: string;
   firstName: string;
@@ -24,21 +18,71 @@ type Tutor = {
   rate: string;
   avatar: string;
   avatarBg: string;
+  courses: string[];
+  mode: string;
 };
+
+type BookingScreenProps = {
+  route: {
+    params: {
+      tutor: Tutor;
+    };
+  };
+  navigation: {
+    navigate: (screen: string, params: object) => void;
+  };
+};
+
+// Generate the next 7 days starting from tomorrow
+function getUpcomingDates(): { label: string; value: string }[] {
+  const dates = [];
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  for (let i = 1; i <= 7; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const label = dayNames[d.getDay()] + ' ' + monthNames[d.getMonth()] + ' ' + d.getDate();
+    const value = y + '-' + m + '-' + day;
+    dates.push({ label, value });
+  }
+  return dates;
+}
+
+const UPCOMING_DATES = getUpcomingDates();
+
+// Display label → ISO HH:mm value for LocalTime.parse()
+const TIME_SLOTS: { label: string; value: string }[] = [
+  { label: '9:00 AM',  value: '09:00' },
+  { label: '10:00 AM', value: '10:00' },
+  { label: '11:00 AM', value: '11:00' },
+  { label: '1:00 PM',  value: '13:00' },
+  { label: '2:00 PM',  value: '14:00' },
+  { label: '3:00 PM',  value: '15:00' },
+  { label: '4:00 PM',  value: '16:00' },
+];
 
 function BookingScreen({ route, navigation }: BookingScreenProps) {
   const tutor = route.params.tutor;
   const name = tutor.firstName + ' ' + tutor.lastName;
 
-  const [selectedDate, setSelectedDate] = useState('');
-  const [selectedTime, setSelectedTime] = useState('');
+  const [selectedDate, setSelectedDate] = useState<{ label: string; value: string } | null>(null);
+  const [selectedTime, setSelectedTime] = useState<{ label: string; value: string } | null>(null);
   const [selectedMode, setSelectedMode] = useState('');
-  const [courseNumber, setCourseNumber] = useState('');
+  const [selectedCourse, setSelectedCourse] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Only show mode options the tutor actually supports
+  const modeOptions: string[] = [];
+  if (tutor.mode === 'Online' || tutor.mode === 'Both') { modeOptions.push('Online'); }
+  if (tutor.mode === 'In-Person' || tutor.mode === 'Both') { modeOptions.push('In-Person'); }
+  if (modeOptions.length === 0) { modeOptions.push('Online', 'In-Person'); }
+
   async function handleConfirm() {
-    if (selectedDate === '' || selectedTime === '' || selectedMode === '') {
-      Alert.alert('Incomplete', 'Please select a date, time, and meeting mode.');
+    if (!selectedDate || !selectedTime || selectedMode === '' || selectedCourse === '') {
+      Alert.alert('Incomplete', 'Please select a date, time, mode, and course.');
       return;
     }
     if (courseNumber.trim() === '') {
@@ -49,16 +93,17 @@ function BookingScreen({ route, navigation }: BookingScreenProps) {
     try {
       await bookSession({
         tutorId: tutor.id,
-        courseNumber: courseNumber.trim(),
-        sessionDate: selectedDate,
-        sessionTime: selectedTime,
+        courseNumber: selectedCourse,
+        sessionDate: selectedDate.value,
+        sessionTime: selectedTime.value,
         mode: selectedMode,
       });
       navigation.navigate('Confirmation', {
-        tutor: tutor,
-        date: selectedDate,
-        time: selectedTime,
+        tutor,
+        date: selectedDate.label,
+        time: selectedTime.label,
         mode: selectedMode,
+        course: selectedCourse,
       });
     } catch (err) {
       Alert.alert('Error', 'Could not book session. Please try again.');
@@ -76,28 +121,33 @@ function BookingScreen({ route, navigation }: BookingScreenProps) {
         </View>
       </View>
 
-      <Text style={styles.sectionLabel}>Course Number</Text>
-      <TextInput
-        style={styles.input}
-        value={courseNumber}
-        onChangeText={setCourseNumber}
-        placeholder="e.g. IT 279"
-        placeholderTextColor={COLORS.darkGray}
-      />
+      <Text style={styles.sectionLabel}>Select a Course</Text>
+      <View style={styles.optionRow}>
+        {tutor.courses.map(function(course) {
+          const isSelected = selectedCourse === course;
+          return (
+            <TouchableOpacity
+              key={course}
+              style={[styles.optionBtn, isSelected && styles.optionBtnActive]}
+              onPress={function() { setSelectedCourse(course); }}
+            >
+              <Text style={[styles.optionText, isSelected && styles.optionTextActive]}>{course}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
       <Text style={styles.sectionLabel}>Select a Date</Text>
       <View style={styles.optionRow}>
-        {DATES.map((date) => {
-          const isSelected = selectedDate === date;
+        {UPCOMING_DATES.map(function(date) {
+          const isSelected = selectedDate?.value === date.value;
           return (
             <TouchableOpacity
-              key={date}
+              key={date.value}
               style={[styles.optionBtn, isSelected && styles.optionBtnActive]}
               onPress={() => setSelectedDate(date)}
             >
-              <Text style={[styles.optionText, isSelected && styles.optionTextActive]}>
-                {date}
-              </Text>
+              <Text style={[styles.optionText, isSelected && styles.optionTextActive]}>{date.label}</Text>
             </TouchableOpacity>
           );
         })}
@@ -105,17 +155,15 @@ function BookingScreen({ route, navigation }: BookingScreenProps) {
 
       <Text style={styles.sectionLabel}>Select a Time</Text>
       <View style={styles.optionRow}>
-        {TIME_SLOTS.map((slot) => {
-          const isSelected = selectedTime === slot;
+        {TIME_SLOTS.map(function(slot) {
+          const isSelected = selectedTime?.value === slot.value;
           return (
             <TouchableOpacity
-              key={slot}
+              key={slot.value}
               style={[styles.optionBtn, isSelected && styles.optionBtnActive]}
               onPress={() => setSelectedTime(slot)}
             >
-              <Text style={[styles.optionText, isSelected && styles.optionTextActive]}>
-                {slot}
-              </Text>
+              <Text style={[styles.optionText, isSelected && styles.optionTextActive]}>{slot.label}</Text>
             </TouchableOpacity>
           );
         })}
@@ -123,7 +171,7 @@ function BookingScreen({ route, navigation }: BookingScreenProps) {
 
       <Text style={styles.sectionLabel}>Meeting Mode</Text>
       <View style={styles.optionRow}>
-        {['Online', 'In-Person'].map((modeOption) => {
+        {modeOptions.map(function(modeOption) {
           const isSelected = selectedMode === modeOption;
           return (
             <TouchableOpacity
@@ -131,9 +179,7 @@ function BookingScreen({ route, navigation }: BookingScreenProps) {
               style={[styles.optionBtn, isSelected && styles.optionBtnActive]}
               onPress={() => setSelectedMode(modeOption)}
             >
-              <Text style={[styles.optionText, isSelected && styles.optionTextActive]}>
-                {modeOption}
-              </Text>
+              <Text style={[styles.optionText, isSelected && styles.optionTextActive]}>{modeOption}</Text>
             </TouchableOpacity>
           );
         })}
@@ -143,7 +189,7 @@ function BookingScreen({ route, navigation }: BookingScreenProps) {
         <ActivityIndicator color={COLORS.red} style={styles.spinner} />
       ) : (
         <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirm} activeOpacity={0.85}>
-          <Text style={styles.confirmBtnText}>Confirm Booking</Text>
+          <Text style={styles.confirmBtnText}>Send Booking Request</Text>
         </TouchableOpacity>
       )}
     </ScrollView>

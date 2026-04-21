@@ -45,11 +45,30 @@ function mapTutor(dto: any) {
   };
 }
 
-// GET /api/tutors  or  GET /api/tutors?courseNumber=xxx
-export async function getTutors(courseQuery: string) {
+export type TutorFilters = {
+  sessionFormat?: 'online' | 'inPerson' | 'both';
+  minRating?: number;
+  maxPrice?: number;
+  available?: boolean;
+};
+
+// GET /api/tutors  or  GET /api/tutors?courseNumber=xxx&sessionFormat=...&minRating=...&maxPrice=...&available=...
+export async function getTutors(courseQuery: string, filters?: TutorFilters) {
   const params: Record<string, string> = {};
   if (courseQuery && courseQuery.trim() !== '') {
     params.courseNumber = courseQuery.trim();
+  }
+  if (filters?.sessionFormat) {
+    params.sessionFormat = filters.sessionFormat;
+  }
+  if (filters?.minRating !== undefined) {
+    params.minRating = String(filters.minRating);
+  }
+  if (filters?.maxPrice !== undefined) {
+    params.maxPrice = String(filters.maxPrice);
+  }
+  if (filters?.available) {
+    params.available = 'true';
   }
   const response = await api.get('/api/tutors', { params });
   return response.data.map(mapTutor);

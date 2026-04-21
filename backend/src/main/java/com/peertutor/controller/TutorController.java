@@ -26,8 +26,12 @@ public class TutorController {
      */
     @GetMapping
     public ResponseEntity<List<TutorProfileDto>> getTutors(
-            @RequestParam(required = false) String courseNumber) {
-        List<TutorProfileDto> tutors = tutorService.getTutors(courseNumber);
+            @RequestParam(required = false) String courseNumber,
+            @RequestParam(required = false) String sessionFormat,
+            @RequestParam(required = false) Double minRating,
+            @RequestParam(required = false) Double maxPrice,
+            @RequestParam(required = false) Boolean available) {
+        List<TutorProfileDto> tutors = tutorService.getTutors(courseNumber, sessionFormat, minRating, maxPrice, available);
         return ResponseEntity.ok(tutors);
     }
 
