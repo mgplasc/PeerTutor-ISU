@@ -17,6 +17,7 @@ type ConfirmationScreenProps = {
       date: string;
       time: string;
       mode: string;
+      course?: string;
     };
   };
   navigation: {
@@ -35,8 +36,8 @@ function ConfirmationScreen({ route, navigation }: ConfirmationScreenProps) {
     <View style={styles.screen}>
       <View style={styles.card}>
         <Text style={styles.checkmark}>✓</Text>
-        <Text style={styles.title}>Booking Confirmed!</Text>
-        <Text style={styles.subtitle}>Your session has been scheduled</Text>
+        <Text style={styles.title}>Request Sent!</Text>
+        <Text style={styles.subtitle}>Waiting for tutor confirmation</Text>
 
         <View style={styles.details}>
           <View style={styles.row}>

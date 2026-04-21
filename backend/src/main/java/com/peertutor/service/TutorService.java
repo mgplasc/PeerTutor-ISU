@@ -24,7 +24,13 @@ public class TutorService {
      * (e.g. "179" matches "IT 179").
      */
     @Transactional(readOnly = true)
-    public List<TutorProfileDto> getTutors(String courseNumber) {
+    public List<TutorProfileDto> getTutors(
+            String courseNumber,
+            String sessionFormat,
+            Double minRating,
+            Double maxPrice,
+            Boolean available) {
+
         List<TutorProfile> profiles;
 
         if (courseNumber == null || courseNumber.isBlank()) {
@@ -34,6 +40,25 @@ public class TutorService {
         }
 
         return profiles.stream()
+                .filter(p -> {
+                    if (available == null || !available) return true;
+                    return Boolean.TRUE.equals(p.getAvailableForOnline())
+                        || Boolean.TRUE.equals(p.getAvailableForInPerson());
+                })
+                .filter(p -> {
+                    if (sessionFormat == null || sessionFormat.isBlank()) return true;
+                    return switch (sessionFormat.toLowerCase()) {
+                        case "online"   -> Boolean.TRUE.equals(p.getAvailableForOnline());
+                        case "inperson" -> Boolean.TRUE.equals(p.getAvailableForInPerson());
+                        case "both"     -> Boolean.TRUE.equals(p.getAvailableForOnline())
+                                        && Boolean.TRUE.equals(p.getAvailableForInPerson());
+                        default -> true;
+                    };
+                })
+                .filter(p -> minRating == null
+                        || (p.getRating() != null && p.getRating() >= minRating))
+                .filter(p -> maxPrice == null
+                        || (p.getHourlyRate() != null && p.getHourlyRate() <= maxPrice))
                 .map(TutorProfileDto::new)
                 .collect(Collectors.toList());
     }

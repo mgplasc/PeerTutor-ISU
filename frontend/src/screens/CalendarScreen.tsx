@@ -4,7 +4,7 @@ import {
   ActivityIndicator, TouchableOpacity, ScrollView, Dimensions,
 } from 'react-native';
 import { COLORS } from '../constants/colors';
-import { getSessionsForUser, SessionDto } from '../services/sessionService';
+import { getSessionsForUser, confirmSession, declineSession, SessionDto } from '../services/sessionService';
 import { useAuth } from '../context/AuthContext';
 
 type CalendarMode = 'list' | 'week' | 'month';
@@ -93,10 +93,32 @@ function CalendarScreen() {
     return (session.studentFirstName || '') + ' ' + (session.studentLastName || '');
   }
 
+  async function handleConfirm(sessionId: string) {
+    try {
+      await confirmSession(sessionId);
+      loadSessions();
+    } catch {
+      // silently refresh so UI stays consistent
+      loadSessions();
+    }
+  }
+
+  async function handleDecline(sessionId: string) {
+    try {
+      await declineSession(sessionId);
+      loadSessions();
+    } catch {
+      loadSessions();
+    }
+  }
+
   // SESSION CARD
   function renderSessionCard(session: SessionDto) {
     const otherName = getOtherPersonName(session);
     const statusColor = getStatusColor(session.status);
+    const isTutor = session.tutorId === auth.user.id;
+    const showActions = isTutor && session.status === 'PENDING';
+
     return (
       <View key={session.id} style={styles.sessionCard}>
         <View style={[styles.sessionStatusBar, { backgroundColor: statusColor }]} />
@@ -113,6 +135,24 @@ function CalendarScreen() {
           <Text style={styles.sessionDateTime}>
             {session.sessionDate} · {session.sessionTime} · {session.mode}
           </Text>
+          {showActions && (
+            <View style={styles.actionRow}>
+              <TouchableOpacity
+                style={styles.acceptBtn}
+                onPress={function() { handleConfirm(session.id); }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.acceptBtnText}>Accept</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.declineBtn}
+                onPress={function() { handleDecline(session.id); }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.declineBtnText}>Decline</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </View>
     );
@@ -548,6 +588,19 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { fontSize: 11, color: COLORS.darkGray },
+
+  // Accept / Decline buttons
+  actionRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  acceptBtn: {
+    flex: 1, paddingVertical: 8, borderRadius: 8,
+    backgroundColor: COLORS.green, alignItems: 'center',
+  },
+  acceptBtnText: { color: COLORS.white, fontSize: 13, fontWeight: '700' },
+  declineBtn: {
+    flex: 1, paddingVertical: 8, borderRadius: 8,
+    borderWidth: 1.5, borderColor: COLORS.error, alignItems: 'center',
+  },
+  declineBtnText: { color: COLORS.error, fontSize: 13, fontWeight: '700' },
 });
 
 export default CalendarScreen;
