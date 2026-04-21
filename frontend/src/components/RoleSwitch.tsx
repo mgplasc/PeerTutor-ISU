@@ -38,7 +38,7 @@ function RoleSwitch() {
         <View style={styles.toggle}>
           <TouchableOpacity
             style={[styles.option, auth.activeRole === 'STUDENT' && styles.activeOption]}
-            onPress={function() { auth.setActiveRole('STUDENT'); }}
+            onPress={() => auth.setActiveRole('STUDENT')}
           >
             <Text style={[styles.optionText, auth.activeRole === 'STUDENT' && styles.activeText]}>
               Student
@@ -46,7 +46,7 @@ function RoleSwitch() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.option, auth.activeRole === 'TUTOR' && styles.activeOption]}
-            onPress={function() { auth.setActiveRole('TUTOR'); }}
+            onPress={() => auth.setActiveRole('TUTOR')}
           >
             <Text style={[styles.optionText, auth.activeRole === 'TUTOR' && styles.activeText]}>
               Tutor
@@ -86,7 +86,6 @@ function RoleSwitch() {
 
       await createTutorProfile(auth.user.id, payload);
 
-      // Refresh profiles from backend
       const profiles = await getUserProfiles(auth.user.id);
       const updated = {
         id: auth.user.id,
@@ -97,7 +96,8 @@ function RoleSwitch() {
         studentProfile: profiles.studentProfile,
         tutorProfile: profiles.tutorProfile,
       };
-      auth.setUser(updated, auth.token);
+      auth.setUser(updated, auth.token ?? undefined);
+      auth.setActiveRole('TUTOR'); // Switch to tutor after adding
       setFormView('none');
       Alert.alert('Tutor Profile Added', 'You can now switch to Tutor mode.');
     } catch (err) {
@@ -138,7 +138,8 @@ function RoleSwitch() {
         studentProfile: profiles.studentProfile,
         tutorProfile: profiles.tutorProfile,
       };
-      auth.setUser(updated, auth.token);
+      auth.setUser(updated, auth.token ?? undefined);
+      auth.setActiveRole('STUDENT'); // Switch to student after adding
       setFormView('none');
       Alert.alert('Student Profile Added', 'You can now switch to Student mode.');
     } catch (err) {
@@ -182,7 +183,7 @@ function RoleSwitch() {
         <View style={styles.checkRow}>
           <TouchableOpacity
             style={[styles.checkbox, onlineAvail && styles.checkboxActive]}
-            onPress={function() { setOnlineAvail(!onlineAvail); }}
+            onPress={() => setOnlineAvail(!onlineAvail)}
           >
             <Text style={[styles.checkboxText, onlineAvail && styles.checkboxActiveText]}>
               Online
@@ -190,7 +191,7 @@ function RoleSwitch() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.checkbox, inPersonAvail && styles.checkboxActive]}
-            onPress={function() { setInPersonAvail(!inPersonAvail); }}
+            onPress={() => setInPersonAvail(!inPersonAvail)}
           >
             <Text style={[styles.checkboxText, inPersonAvail && styles.checkboxActiveText]}>
               In-Person
@@ -208,7 +209,7 @@ function RoleSwitch() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.cancelBtn}
-                onPress={function() { setFormView('none'); }}
+                onPress={() => setFormView('none')}
               >
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
@@ -254,7 +255,7 @@ function RoleSwitch() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.cancelBtn}
-                onPress={function() { setFormView('none'); }}
+                onPress={() => setFormView('none')}
               >
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
@@ -287,7 +288,7 @@ function RoleSwitch() {
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{currentRoleLabel}</Text>
         </View>
-        <TouchableOpacity onPress={function() { setFormView(targetForm); }}>
+        <TouchableOpacity onPress={() => setFormView(targetForm)}>
           <Text style={styles.addLink}>{addRoleLabel}</Text>
         </TouchableOpacity>
       </View>

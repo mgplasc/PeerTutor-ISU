@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   ScrollView, StyleSheet, Alert, ActivityIndicator,
@@ -7,9 +7,8 @@ import { COLORS } from '../constants/colors';
 import { registerUser, checkEmailAvailable, loginUser } from '../services/authService';
 import { AuthUser, useAuth } from '../context/AuthContext';
 import CoursePicker from '../components/CoursePicker';
-import { requestUserPermission, registerDeviceToken} from '../utils/notifications';
+import { requestUserPermission, registerDeviceToken } from '../utils/notifications';
 import api, { setAuthToken } from '../services/api';
-
 
 type Mode = 'login' | 'signup-student' | 'signup-tutor';
 
@@ -65,7 +64,6 @@ function LoginScreen({ navigation }: LoginScreenProps) {
         tutorProfile: loginResponse.tutorProfile || null,
       };
 
-      // Pass token as second argument so it gets stored and sent with future requests
       auth.setUser(user, loginResponse.token);
       setAuthToken(loginResponse.token);
 
@@ -79,12 +77,11 @@ function LoginScreen({ navigation }: LoginScreenProps) {
   }
 
   async function setupPushNotifications() {
-    try{
+    try {
       await requestUserPermission();
       await registerDeviceToken(api);
       console.log('Push notification setup complete');
-    }catch (error)
-    {
+    } catch (error) {
       console.error('Error setting up push notifications:', error);
     }
   }
@@ -121,19 +118,25 @@ function LoginScreen({ navigation }: LoginScreenProps) {
       const parsedRate = parseFloat(hourlyRate);
       const resolvedHourlyRate = Number.isNaN(parsedRate) ? 0 : parsedRate;
 
-      const payload = {
-        firstName: firstName,
-        lastName: lastName,
-        email: email,
-        password: password,
-        profileType: profileType,
-        major: major,
-        expectedGraduation: expectedGraduation,
-        hourlyRate: resolvedHourlyRate,
-        courseIds: selectedCourseIds,
+      // Build payload matching backend SignupRequest
+      const payload: any = {
+        firstName,
+        lastName,
+        email,
+        password,
+        profileType,
+        major,
         availableForOnline: onlineAvail,
         availableForInPerson: inPersonAvail,
       };
+
+      if (profileType === 'STUDENT') {
+        payload.expectedGraduation = expectedGraduation;
+      } else {
+        // TUTOR: use courseIds (array of numbers) – backend expects List<Long>
+        payload.hourlyRate = resolvedHourlyRate;
+        payload.courseIds = selectedCourseIds;  // ✅ now matches backend field name
+      }
 
       const signupResult = await registerUser(payload);
 
@@ -143,11 +146,10 @@ function LoginScreen({ navigation }: LoginScreenProps) {
         emailVerified: signupResult.emailVerified,
         hasStudentProfile: signupResult.hasStudentProfile,
         hasTutorProfile: signupResult.hasTutorProfile,
-        studentProfile: signupResult.studentProfile || null,
-        tutorProfile: signupResult.tutorProfile || null,
+        studentProfile: null,
+        tutorProfile: null,
       };
 
-      // No token on signup — user must log in after verifying email
       auth.setUser(newUser);
 
       Alert.alert(
@@ -166,7 +168,7 @@ function LoginScreen({ navigation }: LoginScreenProps) {
       <View style={styles.toggleRow}>
         <TouchableOpacity
           style={[styles.toggleBtn, mode === 'login' && styles.toggleActive]}
-          onPress={function() { setMode('login'); }}
+          onPress={() => setMode('login')}
         >
           <Text style={[styles.toggleText, mode === 'login' && styles.toggleActiveText]}>
             Log In
@@ -174,7 +176,7 @@ function LoginScreen({ navigation }: LoginScreenProps) {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.toggleBtn, mode === 'signup-student' && styles.toggleActive]}
-          onPress={function() { setMode('signup-student'); }}
+          onPress={() => setMode('signup-student')}
         >
           <Text style={[styles.toggleText, mode === 'signup-student' && styles.toggleActiveText]}>
             Student
@@ -182,7 +184,7 @@ function LoginScreen({ navigation }: LoginScreenProps) {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.toggleBtn, mode === 'signup-tutor' && styles.toggleActive]}
-          onPress={function() { setMode('signup-tutor'); }}
+          onPress={() => setMode('signup-tutor')}
         >
           <Text style={[styles.toggleText, mode === 'signup-tutor' && styles.toggleActiveText]}>
             Tutor
@@ -256,7 +258,7 @@ function LoginScreen({ navigation }: LoginScreenProps) {
             />
             <TouchableOpacity
               style={styles.forgotLink}
-              onPress={function() { navigation.navigate('ForgotPassword'); }}
+              onPress={() => navigation.navigate('ForgotPassword')}
             >
               <Text style={styles.forgotLinkText}>Forgot password?</Text>
             </TouchableOpacity>
@@ -332,7 +334,7 @@ function LoginScreen({ navigation }: LoginScreenProps) {
             <View style={styles.checkRow}>
               <TouchableOpacity
                 style={[styles.checkbox, onlineAvail && styles.checkboxActive]}
-                onPress={function() { setOnlineAvail(!onlineAvail); }}
+                onPress={() => setOnlineAvail(!onlineAvail)}
               >
                 <Text style={[styles.checkboxText, onlineAvail && styles.checkboxActiveText]}>
                   Online
@@ -340,7 +342,7 @@ function LoginScreen({ navigation }: LoginScreenProps) {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.checkbox, inPersonAvail && styles.checkboxActive]}
-                onPress={function() { setInPersonAvail(!inPersonAvail); }}
+                onPress={() => setInPersonAvail(!inPersonAvail)}
               >
                 <Text style={[styles.checkboxText, inPersonAvail && styles.checkboxActiveText]}>
                   In-Person
@@ -512,4 +514,3 @@ const styles = StyleSheet.create({
 });
 
 export default LoginScreen;
-

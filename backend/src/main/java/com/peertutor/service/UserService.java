@@ -21,7 +21,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.peertutor.model.PasswordResetToken;
 import com.peertutor.repository.PasswordResetTokenRepository;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.List;
@@ -56,6 +57,8 @@ public class UserService {
 
     @Autowired
     private PasswordResetTokenRepository passwordResetTokenRepository;
+
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
     // ============ AUTHENTICATION METHODS ============
 
@@ -474,5 +477,6 @@ public class UserService {
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
         user.setDeviceToken(deviceToken);
         userRepository.save(user);
+        logger.info("Updated device token for user {}", userId);
     }
 }

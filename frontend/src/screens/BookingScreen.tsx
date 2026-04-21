@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView,
-  StyleSheet, Alert, ActivityIndicator,
+  StyleSheet, Alert, ActivityIndicator, TextInput,
 } from 'react-native';
 import { COLORS } from '../constants/colors';
 import Avatar from '../components/Avatar';
 import { bookSession } from '../services/sessionService';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { HomeStackParamList } from '../navigation/AppNavigator';
+
+type BookingScreenProps = NativeStackScreenProps<HomeStackParamList, 'Booking'>;
 
 type Tutor = {
   id: string;
@@ -81,6 +85,10 @@ function BookingScreen({ route, navigation }: BookingScreenProps) {
       Alert.alert('Incomplete', 'Please select a date, time, mode, and course.');
       return;
     }
+    if (courseNumber.trim() === '') {
+      Alert.alert('Missing Course', 'Please enter the course number you need help with.');
+      return;
+    }
     setLoading(true);
     try {
       await bookSession({
@@ -137,7 +145,7 @@ function BookingScreen({ route, navigation }: BookingScreenProps) {
             <TouchableOpacity
               key={date.value}
               style={[styles.optionBtn, isSelected && styles.optionBtnActive]}
-              onPress={function() { setSelectedDate(date); }}
+              onPress={() => setSelectedDate(date)}
             >
               <Text style={[styles.optionText, isSelected && styles.optionTextActive]}>{date.label}</Text>
             </TouchableOpacity>
@@ -153,7 +161,7 @@ function BookingScreen({ route, navigation }: BookingScreenProps) {
             <TouchableOpacity
               key={slot.value}
               style={[styles.optionBtn, isSelected && styles.optionBtnActive]}
-              onPress={function() { setSelectedTime(slot); }}
+              onPress={() => setSelectedTime(slot)}
             >
               <Text style={[styles.optionText, isSelected && styles.optionTextActive]}>{slot.label}</Text>
             </TouchableOpacity>
@@ -169,7 +177,7 @@ function BookingScreen({ route, navigation }: BookingScreenProps) {
             <TouchableOpacity
               key={modeOption}
               style={[styles.optionBtn, isSelected && styles.optionBtnActive]}
-              onPress={function() { setSelectedMode(modeOption); }}
+              onPress={() => setSelectedMode(modeOption)}
             >
               <Text style={[styles.optionText, isSelected && styles.optionTextActive]}>{modeOption}</Text>
             </TouchableOpacity>
@@ -268,6 +276,17 @@ const styles = StyleSheet.create({
   },
   spinner: {
     marginTop: 20,
+  },
+  input: {
+    backgroundColor: COLORS.white,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: COLORS.black,
+    borderWidth: 1,
+    borderColor: COLORS.medGray,
+    marginBottom: 16,
   },
 });
 

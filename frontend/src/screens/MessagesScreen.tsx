@@ -17,7 +17,7 @@ function MessagesScreen() {
   const [sending, setSending] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
-  useEffect(function() {
+  useEffect(() => {
     loadConversations();
   }, []);
 
@@ -55,7 +55,7 @@ function MessagesScreen() {
       setMessageText('');
       const updated = await getConversation(activeConv.id);
       setActiveConv(updated);
-      setTimeout(function() {
+      setTimeout(() => {
         if (flatListRef.current && updated.messages.length > 0) {
           flatListRef.current.scrollToEnd({ animated: true });
         }
@@ -114,13 +114,12 @@ function MessagesScreen() {
 
   if (activeConv !== null) {
     const otherName = getOtherPersonName(activeConv);
-    const otherInitials = getOtherPersonInitials(activeConv);
     const isClosed = activeConv.status === 'CLOSED';
 
     return (
       <View style={styles.screen}>
         <View style={styles.chatHeader}>
-          <TouchableOpacity onPress={function() {
+          <TouchableOpacity onPress={() => {
             setActiveConv(null);
             loadConversations();
           }}>
@@ -146,17 +145,17 @@ function MessagesScreen() {
         <FlatList
           ref={flatListRef}
           data={activeConv.messages}
-          keyExtractor={function(item: MessageDto) { return item.id; }}
+          keyExtractor={(item: MessageDto) => item.id}
           contentContainerStyle={styles.messageList}
-          onContentSizeChange={function() {
+          onContentSizeChange={() => {
             if (flatListRef.current) {
               flatListRef.current.scrollToEnd({ animated: false });
             }
           }}
-          renderItem={function({ item }: { item: MessageDto }) {
+          renderItem={({ item }: { item: MessageDto }) => {
             const isMe = item.senderId === auth.user.id;
             return (
-              <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleThem]}>
+              <View style={[styles.bubble, isMe && styles.bubbleMe]}>
                 <Text style={[styles.bubbleText, isMe && styles.bubbleTextMe]}>
                   {item.content}
                 </Text>
@@ -208,18 +207,18 @@ function MessagesScreen() {
       </View>
       <FlatList
         data={conversations}
-        keyExtractor={function(item: ConversationDto) { return item.id; }}
+        keyExtractor={(item: ConversationDto) => item.id}
         contentContainerStyle={styles.convList}
         onRefresh={loadConversations}
         refreshing={loading}
-        renderItem={function({ item }: { item: ConversationDto }) {
+        renderItem={({ item }: { item: ConversationDto }) => {
           const otherName = getOtherPersonName(item);
           const otherInitials = getOtherPersonInitials(item);
           const isClosed = item.status === 'CLOSED';
           return (
             <TouchableOpacity
               style={[styles.convItem, isClosed && styles.convItemClosed]}
-              onPress={function() { openConversation(item); }}
+              onPress={() => openConversation(item)}
             >
               <Avatar initials={otherInitials} bg={COLORS.red} size={48} />
               <View style={styles.convInfo}>
