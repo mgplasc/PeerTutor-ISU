@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View, Text, FlatList, StyleSheet,
   ActivityIndicator, TouchableOpacity, ScrollView, Dimensions,
@@ -27,9 +28,9 @@ function CalendarScreen() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('upcoming');
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  useEffect(function() {
+  useFocusEffect(useCallback(function() {
     loadSessions();
-  }, []);
+  }, []));
 
   async function loadSessions() {
     setLoading(true);
@@ -47,7 +48,7 @@ function CalendarScreen() {
     today.setHours(0, 0, 0, 0);
     return sessions.filter(function(s) {
       if (statusFilter === 'upcoming') {
-        const d = new Date(s.sessionDate);
+        const d = new Date(s.sessionDate + 'T23:59:59');
         return (s.status === 'CONFIRMED' || s.status === 'PENDING') && d >= today;
       }
       if (statusFilter === 'pending') { return s.status === 'PENDING'; }
