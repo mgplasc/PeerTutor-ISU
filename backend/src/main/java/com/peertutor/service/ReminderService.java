@@ -2,6 +2,8 @@ package com.peertutor.service;
 
 import com.peertutor.model.Session;
 import com.peertutor.repository.SessionRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -15,6 +17,8 @@ import java.util.List;
 @EnableScheduling
 public class ReminderService {
 
+    private static final Logger logger = LoggerFactory.getLogger(ReminderService.class);
+
     @Autowired
     private SessionRepository sessionRepository;
 
@@ -24,24 +28,25 @@ public class ReminderService {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MMM dd, yyyy");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("h:mm a");
 
-    // Run every hour at minute 0 (e.g., 00:00, 01:00, 02:00...)
     @Scheduled(cron = "0 0 * * * *")
     @Transactional
     public void sendUpcomingSessionReminders() {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime twentyFourHoursLater = now.plusHours(24);
+        logger.info("Checking for session reminders at {}", now);
 
         List<Session> sessions = sessionRepository.findConfirmedSessionsNeedingReminder();
+        logger.info("Found {} sessions needing reminder check", sessions.size());
 
         for (Session session : sessions) {
             LocalDateTime sessionDateTime = LocalDateTime.of(session.getSessionDate(), session.getSessionTime());
 
-            // Check if session is within the next 24 hours
             if (sessionDateTime.isAfter(now) && sessionDateTime.isBefore(twentyFourHoursLater)) {
+                logger.info("Sending reminder for session {} (course {})", session.getId(), session.getCourseNumber());
                 String sessionDateStr = session.getSessionDate().format(DATE_FORMATTER);
                 String sessionTimeStr = session.getSessionTime().format(TIME_FORMATTER);
 
-                // Send reminder to student
+                // Send to student
                 if (session.getStudent().getDeviceToken() != null && !session.getStudent().getDeviceToken().isEmpty()) {
                     notificationService.sendSessionReminder(
                         session.getStudent(),
@@ -52,7 +57,7 @@ public class ReminderService {
                     );
                 }
 
-                // Send reminder to tutor
+                // Send to tutor
                 if (session.getTutor().getDeviceToken() != null && !session.getTutor().getDeviceToken().isEmpty()) {
                     notificationService.sendSessionReminder(
                         session.getTutor(),
@@ -63,7 +68,6 @@ public class ReminderService {
                     );
                 }
 
-                // Mark reminder as sent to avoid duplicate reminders
                 session.setReminderSent(true);
                 sessionRepository.save(session);
             }

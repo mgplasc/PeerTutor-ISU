@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView,
-  StyleSheet, Alert, ActivityIndicator,
+  StyleSheet, Alert, ActivityIndicator, TextInput,
 } from 'react-native';
 import { COLORS } from '../constants/colors';
 import Avatar from '../components/Avatar';
 import { bookSession } from '../services/sessionService';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { HomeStackParamList } from '../navigation/AppNavigator';
+
+type BookingScreenProps = NativeStackScreenProps<HomeStackParamList, 'Booking'>;
 
 // TODO: replace with real time slots from tutor's availability
 const TIME_SLOTS = ['9:00 AM', '10:00 AM', '11:00 AM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM'];
@@ -22,17 +26,6 @@ type Tutor = {
   avatarBg: string;
 };
 
-type BookingScreenProps = {
-  route: {
-    params: {
-      tutor: Tutor;
-    };
-  };
-  navigation: {
-    navigate: (screen: string, params: object) => void;
-  };
-};
-
 function BookingScreen({ route, navigation }: BookingScreenProps) {
   const tutor = route.params.tutor;
   const name = tutor.firstName + ' ' + tutor.lastName;
@@ -40,7 +33,7 @@ function BookingScreen({ route, navigation }: BookingScreenProps) {
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [selectedMode, setSelectedMode] = useState('');
-  // TODO: add course selection (student should pick which of the tutor's courses to book for)
+  const [courseNumber, setCourseNumber] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function handleConfirm() {
@@ -48,13 +41,17 @@ function BookingScreen({ route, navigation }: BookingScreenProps) {
       Alert.alert('Incomplete', 'Please select a date, time, and meeting mode.');
       return;
     }
+    if (courseNumber.trim() === '') {
+      Alert.alert('Missing Course', 'Please enter the course number you need help with.');
+      return;
+    }
     setLoading(true);
     try {
-      // TODO: replace with POST /api/sessions
       await bookSession({
         tutorId: tutor.id,
-        date: selectedDate,
-        time: selectedTime,
+        courseNumber: courseNumber.trim(),
+        sessionDate: selectedDate,
+        sessionTime: selectedTime,
         mode: selectedMode,
       });
       navigation.navigate('Confirmation', {
@@ -79,16 +76,24 @@ function BookingScreen({ route, navigation }: BookingScreenProps) {
         </View>
       </View>
 
+      <Text style={styles.sectionLabel}>Course Number</Text>
+      <TextInput
+        style={styles.input}
+        value={courseNumber}
+        onChangeText={setCourseNumber}
+        placeholder="e.g. IT 279"
+        placeholderTextColor={COLORS.darkGray}
+      />
+
       <Text style={styles.sectionLabel}>Select a Date</Text>
-      {/* TODO: replace temp dates with tutor's available dates */}
       <View style={styles.optionRow}>
-        {DATES.map(function(date) {
+        {DATES.map((date) => {
           const isSelected = selectedDate === date;
           return (
             <TouchableOpacity
               key={date}
               style={[styles.optionBtn, isSelected && styles.optionBtnActive]}
-              onPress={function() { setSelectedDate(date); }}
+              onPress={() => setSelectedDate(date)}
             >
               <Text style={[styles.optionText, isSelected && styles.optionTextActive]}>
                 {date}
@@ -99,15 +104,14 @@ function BookingScreen({ route, navigation }: BookingScreenProps) {
       </View>
 
       <Text style={styles.sectionLabel}>Select a Time</Text>
-      {/* TODO: replace temp time slots with tutor's available times  */}
       <View style={styles.optionRow}>
-        {TIME_SLOTS.map(function(slot) {
+        {TIME_SLOTS.map((slot) => {
           const isSelected = selectedTime === slot;
           return (
             <TouchableOpacity
               key={slot}
               style={[styles.optionBtn, isSelected && styles.optionBtnActive]}
-              onPress={function() { setSelectedTime(slot); }}
+              onPress={() => setSelectedTime(slot)}
             >
               <Text style={[styles.optionText, isSelected && styles.optionTextActive]}>
                 {slot}
@@ -119,13 +123,13 @@ function BookingScreen({ route, navigation }: BookingScreenProps) {
 
       <Text style={styles.sectionLabel}>Meeting Mode</Text>
       <View style={styles.optionRow}>
-        {['Online', 'In-Person'].map(function(modeOption) {
+        {['Online', 'In-Person'].map((modeOption) => {
           const isSelected = selectedMode === modeOption;
           return (
             <TouchableOpacity
               key={modeOption}
               style={[styles.optionBtn, isSelected && styles.optionBtnActive]}
-              onPress={function() { setSelectedMode(modeOption); }}
+              onPress={() => setSelectedMode(modeOption)}
             >
               <Text style={[styles.optionText, isSelected && styles.optionTextActive]}>
                 {modeOption}
@@ -226,6 +230,17 @@ const styles = StyleSheet.create({
   },
   spinner: {
     marginTop: 20,
+  },
+  input: {
+    backgroundColor: COLORS.white,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: COLORS.black,
+    borderWidth: 1,
+    borderColor: COLORS.medGray,
+    marginBottom: 16,
   },
 });
 

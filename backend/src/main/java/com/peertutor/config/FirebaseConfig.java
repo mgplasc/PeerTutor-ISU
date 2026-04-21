@@ -14,16 +14,17 @@ public class FirebaseConfig {
     @PostConstruct
     public void initialize() {
         try {
-            InputStream serviceAccount = new ClassPathResource("firebase-service-account.json").getInputStream();
+            InputStream serviceAccount = new ClassPathResource("peertutor-isu-firebase-adminsdk-fbsvc-7ddcbe2e39.json").getInputStream();
             FirebaseOptions options = FirebaseOptions.builder()
                     .setCredentials(GoogleCredentials.fromStream(serviceAccount))
                     .build();
             if (FirebaseApp.getApps().isEmpty()) {
                 FirebaseApp.initializeApp(options);
-                System.out.println("Firebase Admin SDK initialized");
+                System.out.println("Firebase Admin SDK initialized successfully");
             }
         } catch (Exception e) {
             System.err.println("Firebase init failed: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }

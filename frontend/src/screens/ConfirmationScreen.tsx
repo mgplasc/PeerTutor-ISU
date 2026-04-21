@@ -2,6 +2,13 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { COLORS } from '../constants/colors';
 
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { HomeStackParamList } from '../navigation/AppNavigator'; 
+
+type TutorProfileScreenProps = NativeStackScreenProps<HomeStackParamList, 'TutorProfile'>;
+type BookingScreenProps = NativeStackScreenProps<HomeStackParamList, 'Booking'>;
+type ConfirmationScreenProps = NativeStackScreenProps<HomeStackParamList, 'Confirmation'>;
+
 type Tutor = {
   firstName: string;
   lastName: string;
@@ -10,19 +17,6 @@ type Tutor = {
   avatarBg: string;
 };
 
-type ConfirmationScreenProps = {
-  route: {
-    params: {
-      tutor: Tutor;
-      date: string;
-      time: string;
-      mode: string;
-    };
-  };
-  navigation: {
-    navigate: (screen: string) => void;
-  };
-};
 
 function ConfirmationScreen({ route, navigation }: ConfirmationScreenProps) {
   const tutor = route.params.tutor;
@@ -72,9 +66,9 @@ function ConfirmationScreen({ route, navigation }: ConfirmationScreenProps) {
           <Text style={styles.homeBtnText}>Back to Home</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.messagesBtn}
-          onPress={function() { navigation.navigate('Messages'); }}
+       <TouchableOpacity
+        style={styles.messagesBtn}
+        onPress={() => navigation.getParent()?.navigate('Messages')}
         >
           <Text style={styles.messagesBtnText}>Message Tutor</Text>
         </TouchableOpacity>

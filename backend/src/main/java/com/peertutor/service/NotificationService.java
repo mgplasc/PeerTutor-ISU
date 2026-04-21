@@ -25,9 +25,10 @@ public class NotificationService {
     }
 
     public void sendSessionReminder(User user, String role, String courseNumber, String sessionDate, String sessionTime) {
-        String title = "Upcoming Session Reminder";
-        String body = "You have an upcoming " + role + " session for " + courseNumber +
-                " on " + sessionDate + " at " + sessionTime;
-        fcmService.sendPush(user.getDeviceToken(), title, body);
-    }
+    String displayRole = role.equals("student") ? "tutoring" : "teaching";
+    String title = "Upcoming Session Reminder";
+    String body = String.format("Your %s session for %s is on %s at %s.",
+        displayRole, courseNumber, sessionDate, sessionTime);
+    fcmService.sendPush(user.getDeviceToken(), title, body);
+}
 }

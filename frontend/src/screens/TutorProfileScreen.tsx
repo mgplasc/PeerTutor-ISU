@@ -13,18 +13,12 @@ import Avatar from '../components/Avatar';
 import StarRating from '../components/StarRating';
 import Tag from '../components/Tag';
 import { getTutorById } from '../services/tutorService';
+import { HomeStackParamList } from '../navigation/AppNavigator'; 
 
-// Define the param list for the stack that includes TutorProfile
-type HomeStackParamList = {
-  Home: undefined;
-  TutorProfile: { tutorId: string };
-  Booking: { tutor: Tutor };
-  Confirmation: undefined;
-  // add other screens in this stack if needed
-};
-
-// Use the correct props type for a native stack screen
 type TutorProfileScreenProps = NativeStackScreenProps<HomeStackParamList, 'TutorProfile'>;
+type BookingScreenProps = NativeStackScreenProps<HomeStackParamList, 'Booking'>;
+type ConfirmationScreenProps = NativeStackScreenProps<HomeStackParamList, 'Confirmation'>;
+
 
 // Tutor type (can be moved to a shared types file)
 type Tutor = {

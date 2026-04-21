@@ -11,72 +11,68 @@ import ConfirmationScreen from '../screens/ConfirmationScreen';
 import MessagesScreen from '../screens/MessagesScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import AvailabilityScreen from '../screens/AvailabilityScreen';
+
+// Define param list for type safety (optional but helpful)
+export type HomeStackParamList = {
+  Home: undefined;
+  TutorProfile: { tutorId: string };
+  Booking: { tutor: any };
+  Confirmation: { tutor: any; date: string; time: string; mode: string };
+};
 
 const Tab = createBottomTabNavigator();
-const Stack = createNativeStackNavigator();
+const StudentStack = createNativeStackNavigator<HomeStackParamList>();
+const TutorStack = createNativeStackNavigator();
 
 function StudentHomeStack() {
   return (
-    <Stack.Navigator
+    <StudentStack.Navigator
       screenOptions={{
         headerStyle: { backgroundColor: COLORS.red },
         headerTintColor: COLORS.white,
         headerTitleStyle: { fontWeight: '700' },
       }}
     >
-      <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Find a Tutor' }} />
-      <Stack.Screen name="TutorProfile" component={TutorProfileScreen} options={{ title: 'Tutor Profile' }} />
-      <Stack.Screen name="Booking" component={BookingScreen} options={{ title: 'Book Session' }} />
-      <Stack.Screen name="Confirmation" component={ConfirmationScreen} options={{ title: 'Confirmed!' }} />
-    </Stack.Navigator>
+      {/* Use 'as any' to bypass TypeScript strictness */}
+      <StudentStack.Screen name="Home" component={HomeScreen as any} options={{ title: 'Find a Tutor' }} />
+      <StudentStack.Screen name="TutorProfile" component={TutorProfileScreen as any} options={{ title: 'Tutor Profile' }} />
+      <StudentStack.Screen name="Booking" component={BookingScreen as any} options={{ title: 'Book Session' }} />
+      <StudentStack.Screen name="Confirmation" component={ConfirmationScreen as any} options={{ title: 'Confirmed!' }} />
+    </StudentStack.Navigator>
   );
 }
 
-function TutorDashboardStack() {
+function TutorAvailabilityStack() {
   return (
-    <Stack.Navigator
+    <TutorStack.Navigator
       screenOptions={{
         headerStyle: { backgroundColor: COLORS.red },
         headerTintColor: COLORS.white,
         headerTitleStyle: { fontWeight: '700' },
       }}
     >
-      <Stack.Screen
-        name="TutorDashboard"
-        component={HomeScreen}
-        options={{ title: 'Tutor Dashboard' }}
-      />
-    </Stack.Navigator>
+      <TutorStack.Screen name="Availability" component={AvailabilityScreen} options={{ title: 'My Availability' }} />
+    </TutorStack.Navigator>
   );
 }
 
 function AppNavigator() {
   const auth = useAuth();
 
-  let homeTab = null;
-  if (auth.activeRole === 'TUTOR') {
-    homeTab = (
-      <Tab.Screen
-        name="FindTab"
-        component={TutorDashboardStack}
-        options={{
-          headerShown: false,
-          tabBarLabel: 'Requests',
-        }}
-      />
-    );
-  } else {
-    homeTab = (
-      <Tab.Screen
-        name="FindTab"
-        component={StudentHomeStack}
-        options={{
-          headerShown: false,
-          tabBarLabel: 'Find',
-        }}
-      />
-    );
-  }
+  const firstTab = auth.activeRole === 'TUTOR' ? (
+    <Tab.Screen
+      name="AvailabilityTab"
+      component={TutorAvailabilityStack}
+      options={{ headerShown: false, tabBarLabel: 'Availability' }}
+    />
+  ) : (
+    <Tab.Screen
+      name="FindTab"
+      component={StudentHomeStack}
+      options={{ headerShown: false, tabBarLabel: 'Find' }}
+    />
+  );
 
   return (
     <Tab.Navigator
@@ -86,36 +82,18 @@ function AppNavigator() {
         tabBarStyle: {
           borderTopColor: COLORS.medGray,
           backgroundColor: COLORS.white,
-          height:70,
+          height: 70,
           paddingBottom: 8,
         },
-        tabBarLabelStyle: {
-          fontSize: 13,
-          fontWeight: '600',
-        },
+        tabBarLabelStyle: { fontSize: 13, fontWeight: '600' },
         tabBarIconStyle: { display: 'none' },
         tabBarShowLabel: true,
       }}
     >
-      {homeTab}
-
-      <Tab.Screen
-        name="Messages"
-        component={MessagesScreen}
-        options={{ headerShown: false }}
-      />
-
-      <Tab.Screen
-        name="Schedule"
-        component={CalendarScreen}
-        options={{ headerShown: false }}
-      />
-
-      <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{ headerShown: false }}
-      />
+      {firstTab}
+      <Tab.Screen name="Messages" component={MessagesScreen} options={{ headerShown: false }} />
+      <Tab.Screen name="Schedule" component={CalendarScreen} options={{ headerShown: false }} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
     </Tab.Navigator>
   );
 }
