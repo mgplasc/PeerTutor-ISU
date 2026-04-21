@@ -27,6 +27,9 @@ type Tutor = {
   avatar: string;
   avatarBg: string;
   year: string;
+  // optional if not used in HomeScreen, but may be included from mapping
+  major?: string;
+  bio?: string;
 };
 
 function HomeScreen({ navigation }: HomeScreenProps) {
@@ -55,8 +58,9 @@ function HomeScreen({ navigation }: HomeScreenProps) {
     loadTutors(text);
   }
 
+  //pass tutorId 
   function handleTutorPress(tutor: Tutor) {
-    navigation.navigate('TutorProfile', { tutor: tutor });
+    navigation.navigate('TutorProfile', { tutorId: tutor.id });
   }
 
   let greeting = 'Find a Tutor';

@@ -1,42 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  TextInput, StyleSheet, ActivityIndicator,
+  TextInput, StyleSheet, ActivityIndicator, Alert,
 } from 'react-native';
 import { COLORS } from '../constants/colors';
 import Avatar from '../components/Avatar';
-import { getConversations, sendMessage } from '../services/messageService';
+import { getConversations, getConversation, sendMessage, ConversationDto, MessageDto } from '../services/messageService';
 import { useAuth } from '../context/AuthContext';
-
-type MessageItem = {
-  id: string;
-  from: string;
-  text: string;
-  timestamp: string;
-};
-
-type ConversationTutor = {
-  firstName: string;
-  lastName: string;
-  avatar: string;
-  avatarBg: string;
-};
-
-type Conversation = {
-  id: string;
-  tutor: ConversationTutor;
-  lastMessage: string;
-  lastTime: string;
-  unreadCount: number;
-  messages: MessageItem[];
-};
 
 function MessagesScreen() {
   const auth = useAuth();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversations, setConversations] = useState<ConversationDto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeConv, setActiveConv] = useState<Conversation | null>(null);
+  const [activeConv, setActiveConv] = useState<ConversationDto | null>(null);
   const [messageText, setMessageText] = useState('');
+  const [sending, setSending] = useState(false);
+  const flatListRef = useRef<FlatList>(null);
 
   useEffect(function() {
     loadConversations();
@@ -53,20 +32,79 @@ function MessagesScreen() {
     setLoading(false);
   }
 
+  async function openConversation(conv: ConversationDto) {
+    try {
+      const full = await getConversation(conv.id);
+      setActiveConv(full);
+    } catch (err) {
+      setActiveConv(conv);
+    }
+  }
+
   async function handleSend() {
-    if (messageText.trim() === '' || activeConv === null) {
+    if (messageText.trim() === '' || activeConv === null || sending) {
       return;
     }
+    if (!activeConv.status || activeConv.status === 'CLOSED') {
+      Alert.alert('Conversation Closed', 'This conversation has been closed.');
+      return;
+    }
+    setSending(true);
     try {
       await sendMessage(activeConv.id, messageText.trim());
       setMessageText('');
-      await loadConversations();
-      const updated = conversations.find(function(c: Conversation) { return c.id === activeConv.id; });
-      if (updated !== undefined) {
-        setActiveConv(updated);
-      }
+      const updated = await getConversation(activeConv.id);
+      setActiveConv(updated);
+      setTimeout(function() {
+        if (flatListRef.current && updated.messages.length > 0) {
+          flatListRef.current.scrollToEnd({ animated: true });
+        }
+      }, 100);
     } catch (err) {
-      // fail silently for now
+      Alert.alert('Error', 'Could not send message. Please try again.');
+    }
+    setSending(false);
+  }
+
+  function getOtherPersonName(conv: ConversationDto) {
+    const myId = auth.user.id;
+    if (conv.studentId === myId) {
+      return (conv.tutorFirstName || '') + ' ' + (conv.tutorLastName || '');
+    }
+    return (conv.studentFirstName || '') + ' ' + (conv.studentLastName || '');
+  }
+
+  function getOtherPersonInitials(conv: ConversationDto) {
+    const name = getOtherPersonName(conv);
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return parts[0].charAt(0).toUpperCase() + parts[1].charAt(0).toUpperCase();
+    }
+    return name.charAt(0).toUpperCase();
+  }
+
+  function formatTime(isoString: string) {
+    try {
+      const date = new Date(isoString);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
+  }
+
+  function formatConvTime(isoString: string) {
+    try {
+      const date = new Date(isoString);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1) { return 'just now'; }
+      if (diffMins < 60) { return diffMins + 'm'; }
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) { return diffHours + 'h'; }
+      return Math.floor(diffHours / 24) + 'd';
+    } catch {
+      return '';
     }
   }
 
@@ -75,46 +113,90 @@ function MessagesScreen() {
   }
 
   if (activeConv !== null) {
-    const tutorName = activeConv.tutor.firstName + ' ' + activeConv.tutor.lastName;
+    const otherName = getOtherPersonName(activeConv);
+    const otherInitials = getOtherPersonInitials(activeConv);
+    const isClosed = activeConv.status === 'CLOSED';
 
     return (
       <View style={styles.screen}>
         <View style={styles.chatHeader}>
-          <TouchableOpacity onPress={function() { setActiveConv(null); }}>
+          <TouchableOpacity onPress={function() {
+            setActiveConv(null);
+            loadConversations();
+          }}>
             <Text style={styles.backBtn}>Back</Text>
           </TouchableOpacity>
-          <Text style={styles.chatTitle}>{tutorName}</Text>
+          <View style={styles.chatHeaderInfo}>
+            <Text style={styles.chatTitle}>{otherName.trim()}</Text>
+            <Text style={styles.chatSubtitle}>
+              {activeConv.courseNumber}
+              {isClosed ? ' · Closed' : ''}
+            </Text>
+          </View>
         </View>
 
+        {isClosed && (
+          <View style={styles.closedBanner}>
+            <Text style={styles.closedText}>
+              This conversation closed 24 hours after the session.
+            </Text>
+          </View>
+        )}
+
         <FlatList
+          ref={flatListRef}
           data={activeConv.messages}
-          keyExtractor={function(item: MessageItem) { return item.id; }}
+          keyExtractor={function(item: MessageDto) { return item.id; }}
           contentContainerStyle={styles.messageList}
-          renderItem={function({ item }: { item: MessageItem }) {
-            const isMe = item.from === 'me';
+          onContentSizeChange={function() {
+            if (flatListRef.current) {
+              flatListRef.current.scrollToEnd({ animated: false });
+            }
+          }}
+          renderItem={function({ item }: { item: MessageDto }) {
+            const isMe = item.senderId === auth.user.id;
             return (
               <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleThem]}>
                 <Text style={[styles.bubbleText, isMe && styles.bubbleTextMe]}>
-                  {item.text}
+                  {item.content}
                 </Text>
-                <Text style={styles.timestamp}>{item.timestamp}</Text>
+                <Text style={[styles.timestamp, isMe && styles.timestampMe]}>
+                  {formatTime(item.sentAt)}
+                </Text>
               </View>
             );
           }}
+          ListEmptyComponent={
+            <Text style={styles.emptyChat}>
+              No messages yet. Say hello!
+            </Text>
+          }
         />
 
-        <View style={styles.inputRow}>
-          <TextInput
-            style={styles.messageInput}
-            value={messageText}
-            onChangeText={setMessageText}
-            placeholder="Type a message..."
-            placeholderTextColor={COLORS.darkGray}
-          />
-          <TouchableOpacity style={styles.sendBtn} onPress={handleSend}>
-            <Text style={styles.sendBtnText}>Send</Text>
-          </TouchableOpacity>
-        </View>
+        {!isClosed && (
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.messageInput}
+              value={messageText}
+              onChangeText={setMessageText}
+              placeholder="Type a message..."
+              placeholderTextColor={COLORS.darkGray}
+              multiline={true}
+              maxLength={1000}
+            />
+            <TouchableOpacity
+              style={[styles.sendBtn, sending && styles.sendBtnDisabled]}
+              onPress={handleSend}
+              disabled={sending}
+            >
+              {sending ? (
+                <ActivityIndicator color={COLORS.white} size="small" />
+              ) : (
+                <Text style={styles.sendBtnText}>Send</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     );
   }
@@ -126,22 +208,34 @@ function MessagesScreen() {
       </View>
       <FlatList
         data={conversations}
-        keyExtractor={function(item: Conversation) { return item.id; }}
+        keyExtractor={function(item: ConversationDto) { return item.id; }}
         contentContainerStyle={styles.convList}
-        renderItem={function({ item }: { item: Conversation }) {
-          const tutorName = item.tutor.firstName + ' ' + item.tutor.lastName;
+        onRefresh={loadConversations}
+        refreshing={loading}
+        renderItem={function({ item }: { item: ConversationDto }) {
+          const otherName = getOtherPersonName(item);
+          const otherInitials = getOtherPersonInitials(item);
+          const isClosed = item.status === 'CLOSED';
           return (
             <TouchableOpacity
-              style={styles.convItem}
-              onPress={function() { setActiveConv(item); }}
+              style={[styles.convItem, isClosed && styles.convItemClosed]}
+              onPress={function() { openConversation(item); }}
             >
-              <Avatar initials={item.tutor.avatar} bg={item.tutor.avatarBg} size={48} />
+              <Avatar initials={otherInitials} bg={COLORS.red} size={48} />
               <View style={styles.convInfo}>
                 <View style={styles.convTopRow}>
-                  <Text style={styles.convName}>{tutorName}</Text>
-                  <Text style={styles.convTime}>{item.lastTime}</Text>
+                  <Text style={styles.convName}>{otherName.trim()}</Text>
+                  <Text style={styles.convTime}>
+                    {formatConvTime(item.lastMessageTime || item.createdAt)}
+                  </Text>
                 </View>
-                <Text style={styles.convLast} numberOfLines={1}>{item.lastMessage}</Text>
+                <Text style={styles.convCourse}>{item.courseNumber}</Text>
+                <Text style={styles.convLast} numberOfLines={1}>
+                  {item.lastMessage || 'No messages yet'}
+                </Text>
+                {isClosed && (
+                  <Text style={styles.closedLabel}>Closed</Text>
+                )}
               </View>
               {item.unreadCount > 0 && (
                 <View style={styles.unreadBadge}>
@@ -152,7 +246,12 @@ function MessagesScreen() {
           );
         }}
         ListEmptyComponent={
-          <Text style={styles.empty}>No messages yet.</Text>
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyTitle}>No Messages Yet</Text>
+            <Text style={styles.emptyDesc}>
+              Messages open automatically when a tutor confirms a session booking.
+            </Text>
+          </View>
         }
       />
     </View>
@@ -189,12 +288,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     gap: 12,
   },
+  convItemClosed: {
+    opacity: 0.7,
+  },
   convInfo: {
     flex: 1,
   },
   convTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
   convName: {
     fontSize: 15,
@@ -205,23 +308,53 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.darkGray,
   },
+  convCourse: {
+    fontSize: 12,
+    color: COLORS.red,
+    fontWeight: '600',
+    marginTop: 2,
+  },
   convLast: {
     fontSize: 13,
     color: COLORS.darkGray,
     marginTop: 2,
   },
+  closedLabel: {
+    fontSize: 11,
+    color: COLORS.darkGray,
+    marginTop: 2,
+    fontStyle: 'italic',
+  },
   unreadBadge: {
     backgroundColor: COLORS.red,
     borderRadius: 10,
-    width: 20,
+    minWidth: 20,
     height: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 4,
   },
   unreadText: {
     color: COLORS.white,
     fontSize: 11,
     fontWeight: '700',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingHorizontal: 32,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.black,
+    marginBottom: 8,
+  },
+  emptyDesc: {
+    fontSize: 14,
+    color: COLORS.darkGray,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   chatHeader: {
     backgroundColor: COLORS.red,
@@ -236,21 +369,51 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  chatHeaderInfo: {
+    flex: 1,
+  },
   chatTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: COLORS.white,
   },
+  chatSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+  },
+  closedBanner: {
+    backgroundColor: COLORS.medGray,
+    padding: 10,
+    alignItems: 'center',
+  },
+  closedText: {
+    fontSize: 12,
+    color: COLORS.darkGray,
+    fontStyle: 'italic',
+  },
   messageList: {
     padding: 16,
-    gap: 8,
+    paddingBottom: 8,
+  },
+  emptyChat: {
+    textAlign: 'center',
+    color: COLORS.darkGray,
+    marginTop: 40,
+    fontSize: 14,
   },
   bubble: {
     maxWidth: '75%',
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 12,
     backgroundColor: COLORS.white,
     alignSelf: 'flex-start',
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   bubbleMe: {
     backgroundColor: COLORS.red,
@@ -259,15 +422,19 @@ const styles = StyleSheet.create({
   bubbleText: {
     fontSize: 14,
     color: COLORS.black,
+    lineHeight: 20,
   },
   bubbleTextMe: {
     color: COLORS.white,
   },
   timestamp: {
     fontSize: 10,
-    color: 'rgba(0,0,0,0.4)',
+    color: COLORS.darkGray,
     marginTop: 4,
     alignSelf: 'flex-end',
+  },
+  timestampMe: {
+    color: 'rgba(255,255,255,0.7)',
   },
   inputRow: {
     flexDirection: 'row',
@@ -276,6 +443,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderTopWidth: 1,
     borderTopColor: COLORS.medGray,
+    alignItems: 'flex-end',
   },
   messageInput: {
     flex: 1,
@@ -285,22 +453,23 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 14,
     color: COLORS.black,
+    maxHeight: 100,
   },
   sendBtn: {
     backgroundColor: COLORS.red,
     borderRadius: 20,
     paddingHorizontal: 18,
+    paddingVertical: 10,
     justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 60,
+  },
+  sendBtnDisabled: {
+    opacity: 0.6,
   },
   sendBtnText: {
     color: COLORS.white,
     fontWeight: '700',
-    fontSize: 14,
-  },
-  empty: {
-    textAlign: 'center',
-    color: COLORS.darkGray,
-    marginTop: 40,
     fontSize: 14,
   },
 });
