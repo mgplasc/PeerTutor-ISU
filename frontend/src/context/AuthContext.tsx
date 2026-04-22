@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setAuthToken } from '../services/api';
+
+// No AsyncStorage import to prevent crash
 
 export type StudentProfile = {
   id: string;
@@ -49,7 +50,7 @@ type AuthContextType = {
   user: AuthUser;
   activeRole: ActiveRole;
   token: string | null;
-  setUser: (user: AuthUser, token?: string) => void;
+  setUser: (user: AuthUser, token?: string | null) => void;
   setActiveRole: (role: ActiveRole) => void;
   logout: () => void;
   displayName: string;
@@ -77,7 +78,8 @@ const AuthContext = createContext<AuthContextType>({
   initials: '',
 });
 
-const ACTIVE_ROLE_KEY = '@PeerTutor_activeRole';
+// Simple in-memory storage (no persistence across app restarts)
+let savedRole: ActiveRole | null = null;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUserState] = useState<AuthUser>(emptyUser);
@@ -85,61 +87,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load saved active role on startup
   useEffect(() => {
-    const loadSavedRole = async () => {
-      try {
-        const savedRole = await AsyncStorage.getItem(ACTIVE_ROLE_KEY);
-        if (savedRole === 'STUDENT' || savedRole === 'TUTOR') {
-          setActiveRoleState(savedRole);
-        }
-      } catch (error) {
-        console.error('Failed to load active role', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadSavedRole();
+    // Load from memory (no AsyncStorage)
+    if (savedRole) {
+      setActiveRoleState(savedRole);
+    }
+    setIsLoading(false);
   }, []);
 
-  // Save active role whenever it changes
-  const setActiveRole = async (role: ActiveRole) => {
+  const setActiveRole = (role: ActiveRole) => {
     setActiveRoleState(role);
-    try {
-      await AsyncStorage.setItem(ACTIVE_ROLE_KEY, role);
-    } catch (error) {
-      console.error('Failed to save active role', error);
-    }
+    savedRole = role;
   };
 
-  function setUser(newUser: AuthUser, newToken?: string) {
+  function setUser(newUser: AuthUser, newToken?: string | null) {
     setUserState(newUser);
-    if (newToken !== undefined) {
+    if (newToken !== undefined && newToken !== null) {
       setToken(newToken);
       setAuthToken(newToken);
     }
-    // Determine initial active role: prefer student if both exist, otherwise the one that exists
+    // Determine default role
     let defaultRole: ActiveRole = 'STUDENT';
     if (newUser.hasStudentProfile) {
       defaultRole = 'STUDENT';
     } else if (newUser.hasTutorProfile) {
       defaultRole = 'TUTOR';
     }
-    // Only set if not already set (avoid overwriting saved role on login)
-    // But on login we want to respect the saved role if it's valid.
-    // We'll check if saved role is valid for this user.
-    AsyncStorage.getItem(ACTIVE_ROLE_KEY).then(savedRole => {
-      if (savedRole === 'STUDENT' && newUser.hasStudentProfile) {
-        setActiveRoleState('STUDENT');
-      } else if (savedRole === 'TUTOR' && newUser.hasTutorProfile) {
-        setActiveRoleState('TUTOR');
-      } else {
-        setActiveRoleState(defaultRole);
-        AsyncStorage.setItem(ACTIVE_ROLE_KEY, defaultRole);
-      }
-    }).catch(() => {
+    // Use saved role if valid, otherwise default
+    if (savedRole === 'STUDENT' && newUser.hasStudentProfile) {
+      setActiveRoleState('STUDENT');
+    } else if (savedRole === 'TUTOR' && newUser.hasTutorProfile) {
+      setActiveRoleState('TUTOR');
+    } else {
       setActiveRoleState(defaultRole);
-    });
+      savedRole = defaultRole;
+    }
   }
 
   function logout() {
@@ -147,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setActiveRoleState('STUDENT');
     setToken(null);
     setAuthToken(null);
-    AsyncStorage.removeItem(ACTIVE_ROLE_KEY);
+    savedRole = null;
   }
 
   let displayName = '';
@@ -165,7 +147,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   if (isLoading) {
-    // You could return a splash screen or null
     return null;
   }
 

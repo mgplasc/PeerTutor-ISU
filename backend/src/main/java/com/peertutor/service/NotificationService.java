@@ -25,10 +25,16 @@ public class NotificationService {
     }
 
     public void sendSessionReminder(User user, String role, String courseNumber, String sessionDate, String sessionTime) {
-    String displayRole = role.equals("student") ? "tutoring" : "teaching";
-    String title = "Upcoming Session Reminder";
-    String body = String.format("Your %s session for %s is on %s at %s.",
-        displayRole, courseNumber, sessionDate, sessionTime);
-    fcmService.sendPush(user.getDeviceToken(), title, body);
-}
+        String displayRole = role.equals("student") ? "tutoring" : "teaching";
+        String title = "Upcoming Session Reminder";
+        String body = String.format("Your %s session for %s is on %s at %s.",
+                displayRole, courseNumber, sessionDate, sessionTime);
+        fcmService.sendPush(user.getDeviceToken(), title, body);
+    }
+
+    public void sendZoomLink(User user, String zoomLink, String courseNumber) {
+        String title = "Zoom Meeting Link";
+        String body = "Your session for " + courseNumber + " is ready. Join: " + zoomLink;
+        fcmService.sendPush(user.getDeviceToken(), title, body);
+    }
 }

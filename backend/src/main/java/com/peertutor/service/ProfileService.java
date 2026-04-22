@@ -69,6 +69,12 @@ public class ProfileService {
         if (request.getExpectedGraduation() != null) {
             profile.setExpectedGraduation(request.getExpectedGraduation());
         }
+        if(request.getBio() != null) {
+            profile.setBio(request.getBio());
+        }
+        if(request.getProfilePhotoUrl() != null) {
+            profile.setProfilePhotoUrl(request.getProfilePhotoUrl());
+        }
 
         userRepository.save(user);
         StudentProfile savedProfile = studentProfileRepository.save(profile);
@@ -114,6 +120,12 @@ public class ProfileService {
         if (request.getCourseIds() != null) {
             List<Course> courses = courseRepository.findAllById(request.getCourseIds());
             profile.setCoursesOffered(courses);
+        }
+        if(request.getBio() != null) {
+            profile.setBio(request.getBio());
+        }
+        if(request.getProfilePhotoUrl() != null) {
+            profile.setProfilePhotoUrl(request.getProfilePhotoUrl());
         }
 
         userRepository.save(user);

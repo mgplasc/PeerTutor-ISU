@@ -30,7 +30,7 @@ function RoleSwitch() {
     return null;
   }
 
-  // Both profiles exist — show toggle
+  // Both profiles exist — show toggle with success alerts
   if (auth.user.hasStudentProfile && auth.user.hasTutorProfile) {
     return (
       <View style={styles.container}>
@@ -38,7 +38,10 @@ function RoleSwitch() {
         <View style={styles.toggle}>
           <TouchableOpacity
             style={[styles.option, auth.activeRole === 'STUDENT' && styles.activeOption]}
-            onPress={() => auth.setActiveRole('STUDENT')}
+            onPress={() => {
+              auth.setActiveRole('STUDENT');
+              Alert.alert('Role Switched', 'You are now viewing as a student.');
+            }}
           >
             <Text style={[styles.optionText, auth.activeRole === 'STUDENT' && styles.activeText]}>
               Student
@@ -46,7 +49,10 @@ function RoleSwitch() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.option, auth.activeRole === 'TUTOR' && styles.activeOption]}
-            onPress={() => auth.setActiveRole('TUTOR')}
+            onPress={() => {
+              auth.setActiveRole('TUTOR');
+              Alert.alert('Role Switched', 'You are now viewing as a tutor.');
+            }}
           >
             <Text style={[styles.optionText, auth.activeRole === 'TUTOR' && styles.activeText]}>
               Tutor
@@ -97,7 +103,7 @@ function RoleSwitch() {
         tutorProfile: profiles.tutorProfile,
       };
       auth.setUser(updated, auth.token ?? undefined);
-      auth.setActiveRole('TUTOR'); // Switch to tutor after adding
+      auth.setActiveRole('TUTOR');
       setFormView('none');
       Alert.alert('Tutor Profile Added', 'You can now switch to Tutor mode.');
     } catch (err) {
@@ -139,7 +145,7 @@ function RoleSwitch() {
         tutorProfile: profiles.tutorProfile,
       };
       auth.setUser(updated, auth.token ?? undefined);
-      auth.setActiveRole('STUDENT'); // Switch to student after adding
+      auth.setActiveRole('STUDENT');
       setFormView('none');
       Alert.alert('Student Profile Added', 'You can now switch to Student mode.');
     } catch (err) {

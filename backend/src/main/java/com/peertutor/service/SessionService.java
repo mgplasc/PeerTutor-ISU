@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;   // <-- ADD THIS IMPORT
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
@@ -33,7 +34,9 @@ public class SessionService {
     @Autowired
     private NotificationService notificationService;
 
-    // book a new session (creates with PENDING status)
+    @Autowired
+    private ZoomService zoomService;
+
     @Transactional
     public SessionDto bookSession(UUID studentId, BookSessionRequest request) {
         User student = userRepository.findById(studentId)
@@ -53,14 +56,12 @@ public class SessionService {
 
         Session saved = sessionRepository.save(session);
 
-        // Notify the tutor of the new booking request
         String studentName = student.getStudentProfile() != null ? student.getStudentProfile().getFullName() : "A student";
         notificationService.notifyTutorBookingRequest(tutor, studentName, request.getCourseNumber());
 
         return new SessionDto(saved);
     }
 
-    // get all sessions for a user (as student or tutor)
     @Transactional(readOnly = true)
     public List<SessionDto> getSessionsForUser(UUID userId) {
         User user = userRepository.findById(userId)
@@ -72,7 +73,7 @@ public class SessionService {
                 .collect(Collectors.toList());
     }
 
-    //tutor confirms a session — also opens the conversation
+    // The ONLY confirmSession method (with Zoom logic)
     @Transactional
     public SessionDto confirmSession(UUID sessionId, UUID tutorId) {
         Session session = sessionRepository.findById(sessionId)
@@ -83,18 +84,31 @@ public class SessionService {
         }
 
         session.setStatus("CONFIRMED");
-        Session saved = sessionRepository.save(session);
 
-        //open a conversation for this session
+        if ("Online".equalsIgnoreCase(session.getMode())) {
+            String topic = "Tutoring Session: " + session.getCourseNumber();
+            LocalDateTime startDateTime = LocalDateTime.of(session.getSessionDate(), session.getSessionTime());
+            int duration = 60;
+            String zoomLink = zoomService.createMeeting(topic, startDateTime, duration);
+            if (zoomLink != null) {
+                session.setZoomLink(zoomLink);
+            }
+        }
+
+        Session saved = sessionRepository.save(session);
         messageService.openConversation(saved);
 
         String tutorName = session.getTutor().getTutorProfile() != null ? session.getTutor().getTutorProfile().getFullName() : "A tutor";
         notificationService.notifyStudentDecision(saved.getStudent(), true, tutorName, saved.getSessionTime().toString());
 
+        if (saved.getZoomLink() != null) {
+            notificationService.sendZoomLink(saved.getStudent(), saved.getZoomLink(), saved.getCourseNumber());
+            notificationService.sendZoomLink(saved.getTutor(), saved.getZoomLink(), saved.getCourseNumber());
+        }
+
         return new SessionDto(saved);
     }
 
-    //tutor declines a session
     @Transactional
     public SessionDto declineSession(UUID sessionId, UUID tutorId) {
         Session session = sessionRepository.findById(sessionId)
@@ -108,12 +122,11 @@ public class SessionService {
         Session saved = sessionRepository.save(session);
 
         String tutorName = session.getTutor().getTutorProfile() != null ? session.getTutor().getTutorProfile().getFullName() : "A tutor";
-        notificationService.notifyStudentDecision(saved.getStudent(), false, tutorName,null);
+        notificationService.notifyStudentDecision(saved.getStudent(), false, tutorName, null);
 
         return new SessionDto(saved);
     }
 
-    //get a single session by ID
     @Transactional(readOnly = true)
     public Optional<SessionDto> getSessionById(UUID sessionId) {
         return sessionRepository.findById(sessionId).map(SessionDto::new);

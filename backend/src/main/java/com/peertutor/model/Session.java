@@ -14,12 +14,10 @@ public class Session {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    //student who booked
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false)
     private User student;
 
-    // tutor being booked
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tutor_id", nullable = false)
     private User tutor;
@@ -33,13 +31,14 @@ public class Session {
     @Column(nullable = false)
     private LocalTime sessionTime;
 
-    // ONLINE or IN_PERSON
     @Column(nullable = false)
     private String mode;
 
-    // PENDING, CONFIRMED, DECLINED, COMPLETED, CANCELLED
     @Column(nullable = false)
     private String status = "PENDING";
+
+    @Column(name = "zoom_link")
+    private String zoomLink;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -61,7 +60,7 @@ public class Session {
         this.updatedAt = LocalDateTime.now();
     }
 
-    // getters and setters
+    // Getters and setters
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
     public User getStudent() { return student; }
@@ -78,8 +77,10 @@ public class Session {
     public void setMode(String mode) { this.mode = mode; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public String getZoomLink() { return zoomLink; }
+    public void setZoomLink(String zoomLink) { this.zoomLink = zoomLink; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public boolean isReminderSent() { return reminderSent; }
-    public void setReminderSent(boolean reminderSent) { this.reminderSent = reminderSent;}
+    public void setReminderSent(boolean reminderSent) { this.reminderSent = reminderSent; }
 }

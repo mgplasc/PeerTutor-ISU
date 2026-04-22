@@ -1,84 +1,89 @@
 import api from './api';
 
-// Avatar background colors — one is picked deterministically from the tutor's id
-const AVATAR_COLORS = ['#CE1126', '#1D4ED8', '#7C3AED', '#0369A1', '#065F46', '#B45309', '#9D174D'];
-
-function getAvatarColor(id: string): string {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) {
-    hash = id.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+export interface TutorFilters {
+  available?: boolean;
+  sessionFormat?: 'online' | 'inPerson' | 'both' | string;
+  minRating?: number;
+  maxPrice?: number;
 }
 
-// Maps a TutorProfileDto from the backend to the Tutor shape used by TutorCard / HomeScreen
-function mapTutor(dto: any) {
-  const online = dto.availableForOnline === true;
-  const inPerson = dto.availableForInPerson === true;
-  let mode = 'Online';
-  if (online && inPerson) {
-    mode = 'Both';
-  } else if (inPerson) {
-    mode = 'In-Person';
-  }
+export interface TutorDto {
+  id: string;
+  firstName: string;
+  lastName: string;
+  major: string;
+  bio: string;
+  hourlyRate: number;
+  rating: number;
+  totalSessions: number;
+  availableForOnline: boolean;
+  availableForInPerson: boolean;
+  coursesOffered: { id: number; courseNumber: string; courseName: string }[];
+}
 
-  const initials =
-    (dto.firstName ? dto.firstName[0] : '') +
-    (dto.lastName  ? dto.lastName[0]  : '');
+export interface Tutor {
+  id: string;
+  firstName: string;
+  lastName: string;
+  courses: string[];
+  rating: number;
+  reviews: number;
+  rate: string;
+  mode: string;
+  available: boolean;
+  avatar: string;
+  avatarBg: string;
+  year: string;
+  major?: string;
+  bio?: string;
+}
+
+function mapTutorDtoToTutor(dto: TutorDto): Tutor {
+  let mode = 'In-Person';
+  if (dto.availableForOnline && dto.availableForInPerson) mode = 'Both';
+  else if (dto.availableForOnline) mode = 'Online';
+  else if (dto.availableForInPerson) mode = 'In-Person';
+
+  const available = dto.availableForOnline || dto.availableForInPerson;
+  const avatar = (dto.firstName?.[0] || '') + (dto.lastName?.[0] || '');
+  const avatarBg = '#CE1126';
+  const reviews = dto.totalSessions || 0;
+  const rate = `$${dto.hourlyRate}/hr`;
+  const courses = (dto.coursesOffered || []).map(c => c.courseNumber);
 
   return {
-    id:        dto.id,
-    firstName: dto.firstName  || '',
-    lastName:  dto.lastName   || '',
-    courses:   (dto.coursesOffered || []).map(function(c: any) { return c.courseNumber; }),
-    rating:    dto.rating       || 0,
-    reviews:   dto.totalSessions || 0,
-    rate:      dto.hourlyRate ? '$' + dto.hourlyRate + '/hr' : 'Rate TBD',
+    id: dto.id,
+    firstName: dto.firstName,
+    lastName: dto.lastName,
+    courses,
+    rating: dto.rating || 0,
+    reviews,
+    rate,
     mode,
-    available: true,
-    avatar:    initials,
-    avatarBg:  getAvatarColor(dto.id),
-    //For profile screen 
-    major:      dto.major || '',
-    bio: dto.bio || '',
-    year: dto.year || '',
+    available,
+    avatar: avatar || '?',
+    avatarBg,
+    year: dto.major,
+    major: dto.major,
+    bio: dto.bio,
   };
 }
 
-export type TutorFilters = {
-  sessionFormat?: 'online' | 'inPerson' | 'both';
-  minRating?: number;
-  maxPrice?: number;
-  available?: boolean;
-};
+export async function getTutors(searchQuery?: string, filters?: TutorFilters): Promise<Tutor[]> {
+  const params: any = {};
+  if (searchQuery) params.courseNumber = searchQuery;
+  if (filters?.sessionFormat) params.sessionFormat = filters.sessionFormat;
+  if (filters?.minRating) params.minRating = filters.minRating;
+  if (filters?.maxPrice) params.maxPrice = filters.maxPrice;
+  if (filters?.available) params.available = filters.available;
 
-// GET /api/tutors  or  GET /api/tutors?courseNumber=xxx&sessionFormat=...&minRating=...&maxPrice=...&available=...
-export async function getTutors(courseQuery: string, filters?: TutorFilters) {
-  const params: Record<string, string> = {};
-  if (courseQuery && courseQuery.trim() !== '') {
-    params.courseNumber = courseQuery.trim();
-  }
-  if (filters?.sessionFormat) {
-    params.sessionFormat = filters.sessionFormat;
-  }
-  if (filters?.minRating !== undefined) {
-    params.minRating = String(filters.minRating);
-  }
-  if (filters?.maxPrice !== undefined) {
-    params.maxPrice = String(filters.maxPrice);
-  }
-  if (filters?.available) {
-    params.available = 'true';
-  }
   const response = await api.get('/api/tutors', { params });
-  return response.data.map(mapTutor);
+  const dtos: TutorDto[] = response.data;
+  return dtos.map(mapTutorDtoToTutor);
 }
 
-// GET /api/tutors/:id
-export async function getTutorById(id: string) {
-  const response = await api.get('/api/tutors/' + id);
-  if (!response.data) {
-    return null;
-  }
-  return mapTutor(response.data);
+export async function getTutorById(id: string): Promise<Tutor> {
+  const response = await api.get(`/api/tutors/${id}`);
+  const dto: TutorDto = response.data;
+  return mapTutorDtoToTutor(dto);
 }

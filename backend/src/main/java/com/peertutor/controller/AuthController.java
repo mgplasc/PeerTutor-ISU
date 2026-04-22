@@ -12,6 +12,9 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
+import com.peertutor.model.User;
+import com.peertutor.util.JwtTokenProvider;
 
 @RestController
 @RequestMapping("/auth")
@@ -19,6 +22,9 @@ public class AuthController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
 
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@Valid @RequestBody SignupRequest signupRequest) {
@@ -287,6 +293,56 @@ public class AuthController {
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    //DELETE /auth/delete-account
+    @DeleteMapping("/delete-account")
+    public ResponseEntity<?> deleteAccount(@RequestHeader("Authorization") String authHeader,
+                                           @Valid @RequestBody DeleteAccountRequest request) {
+        try {
+            String token = authHeader.replace("Bearer ", "");
+            UUID userId = jwtTokenProvider.getUserIdFromToken(token);
+            User user = userService.getUserById(userId);
+
+            boolean hasStudent = user.hasStudentProfile();
+            boolean hasTutor = user.hasTutorProfile();
+
+            if("BOTH".equalsIgnoreCase(request.getDeleteType())) {
+                //Delete full account
+                userService.deleteFullAccount(userId);
+                return ResponseEntity.ok().body(Map.of("message", "Full account deleted successfully."));
+            }
+
+            //Delete single profile
+            if("STUDENT".equalsIgnoreCase(request.getDeleteType()))
+            {
+                if(!hasStudent)
+                {
+                    return ResponseEntity.badRequest().body(Map.of("error", "No student profile to delete."));
+                }
+                userService.deleteSingleProfile(userId, "STUDENT");
+                boolean stillHasTutor = userService.getUserById(userId).hasTutorProfile();
+                return ResponseEntity.ok().body(Map.of("message", "Student profile deleted successfully.",
+                        "remainingProfile", stillHasTutor ? "TUTOR" : "NONE"));
+            }
+            else if("TUTOR".equalsIgnoreCase(request.getDeleteType()))
+            {
+                if(!hasTutor)
+                {
+                    return ResponseEntity.badRequest().body(Map.of("error", "No tutor profile to delete."));
+                }
+                userService.deleteSingleProfile(userId, "TUTOR");
+                boolean stillHasStudent = userService.getUserById(userId).hasStudentProfile();
+                return ResponseEntity.ok().body(Map.of("message", "Tutor profile deleted successfully.",
+                        "remainingProfile", stillHasStudent ? "STUDENT" : "NONE"));
+            }
+            else
+            {
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid delete type. Must be STUDENT, TUTOR, or BOTH."));
+            }
+        } catch (Exception e) {
+           return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 }

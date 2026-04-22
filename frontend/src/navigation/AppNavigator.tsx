@@ -11,9 +11,10 @@ import ConfirmationScreen from '../screens/ConfirmationScreen';
 import MessagesScreen from '../screens/MessagesScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
 import AvailabilityScreen from '../screens/AvailabilityScreen';
 
-// Define param list for type safety (optional but helpful)
+// Param list for the student home stack
 export type HomeStackParamList = {
   Home: undefined;
   TutorProfile: { tutorId: string };
@@ -21,9 +22,16 @@ export type HomeStackParamList = {
   Confirmation: { tutor: any; date: string; time: string; mode: string };
 };
 
+// Param list for the profile stack
+export type ProfileStackParamList = {
+  Profile: undefined;
+  EditProfile: undefined;
+};
+
 const Tab = createBottomTabNavigator();
 const StudentStack = createNativeStackNavigator<HomeStackParamList>();
 const TutorStack = createNativeStackNavigator();
+const ProfileStackNav = createNativeStackNavigator<ProfileStackParamList>();
 
 function StudentHomeStack() {
   return (
@@ -34,7 +42,6 @@ function StudentHomeStack() {
         headerTitleStyle: { fontWeight: '700' },
       }}
     >
-      {/* Use 'as any' to bypass TypeScript strictness */}
       <StudentStack.Screen name="Home" component={HomeScreen as any} options={{ title: 'Find a Tutor' }} />
       <StudentStack.Screen name="TutorProfile" component={TutorProfileScreen as any} options={{ title: 'Tutor Profile' }} />
       <StudentStack.Screen name="Booking" component={BookingScreen as any} options={{ title: 'Book Session' }} />
@@ -54,6 +61,21 @@ function TutorAvailabilityStack() {
     >
       <TutorStack.Screen name="Availability" component={AvailabilityScreen} options={{ title: 'My Availability' }} />
     </TutorStack.Navigator>
+  );
+}
+
+function ProfileStack() {
+  return (
+    <ProfileStackNav.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: COLORS.red },
+        headerTintColor: COLORS.white,
+        headerTitleStyle: { fontWeight: '700' },
+      }}
+    >
+      <ProfileStackNav.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
+      <ProfileStackNav.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit Profile' }} />
+    </ProfileStackNav.Navigator>
   );
 }
 
@@ -93,7 +115,7 @@ function AppNavigator() {
       {firstTab}
       <Tab.Screen name="Messages" component={MessagesScreen} options={{ headerShown: false }} />
       <Tab.Screen name="Schedule" component={CalendarScreen} options={{ headerShown: false }} />
-      <Tab.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
+      <Tab.Screen name="Profile" component={ProfileStack} options={{ headerShown: false }} />
     </Tab.Navigator>
   );
 }

@@ -12,31 +12,10 @@ import { COLORS } from '../constants/colors';
 import Avatar from '../components/Avatar';
 import StarRating from '../components/StarRating';
 import Tag from '../components/Tag';
-import { getTutorById } from '../services/tutorService';
-import { HomeStackParamList } from '../navigation/AppNavigator'; 
+import { getTutorById, Tutor } from '../services/tutorService';
+import { HomeStackParamList } from '../navigation/AppNavigator';
 
 type TutorProfileScreenProps = NativeStackScreenProps<HomeStackParamList, 'TutorProfile'>;
-type BookingScreenProps = NativeStackScreenProps<HomeStackParamList, 'Booking'>;
-type ConfirmationScreenProps = NativeStackScreenProps<HomeStackParamList, 'Confirmation'>;
-
-
-// Tutor type (can be moved to a shared types file)
-type Tutor = {
-  id: string;
-  firstName: string;
-  lastName: string;
-  major: string;
-  bio: string;
-  courses: string[];
-  rating: number;
-  reviews: number;
-  rate: string;
-  mode: string;
-  available: boolean;
-  avatar: string;
-  avatarBg: string;
-  year: string;
-};
 
 function TutorProfileScreen({ route, navigation }: TutorProfileScreenProps) {
   const { tutorId } = route.params;
@@ -56,7 +35,6 @@ function TutorProfileScreen({ route, navigation }: TutorProfileScreenProps) {
         setLoading(false);
       }
     }
-
     fetchTutor();
   }, [tutorId]);
 
@@ -95,7 +73,18 @@ function TutorProfileScreen({ route, navigation }: TutorProfileScreenProps) {
   );
 
   const handleBook = () => {
-    navigation.navigate('Booking', { tutor });
+    navigation.navigate('Booking', {
+      tutor: {
+        id: tutor.id,
+        firstName: tutor.firstName,
+        lastName: tutor.lastName,
+        rate: tutor.rate,
+        avatar: tutor.avatar,
+        avatarBg: tutor.avatarBg,
+        courses: tutor.courses,
+        mode: tutor.mode,
+      },
+    });
   };
 
   return (
@@ -103,9 +92,7 @@ function TutorProfileScreen({ route, navigation }: TutorProfileScreenProps) {
       <View style={styles.heroCard}>
         <Avatar initials={tutor.avatar} bg={tutor.avatarBg} size={80} />
         <Text style={styles.name}>{name}</Text>
-        <Text style={styles.year}>
-          {tutor.year} · {tutor.major}
-        </Text>
+        <Text style={styles.year}>{tutor.year} · {tutor.major || '—'}</Text>
         <View style={styles.tagRow}>
           <Tag text={tutor.mode} type={modeTagType} />
           {availabilityTag}
@@ -145,114 +132,26 @@ function TutorProfileScreen({ route, navigation }: TutorProfileScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: COLORS.lightGray,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: COLORS.darkGray,
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  retryButton: {
-    backgroundColor: COLORS.red,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: COLORS.white,
-    fontWeight: '600',
-  },
-  heroCard: {
-    backgroundColor: COLORS.white,
-    alignItems: 'center',
-    padding: 28,
-    gap: 6,
-  },
-  name: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: COLORS.black,
-    marginTop: 8,
-  },
-  year: {
-    fontSize: 14,
-    color: COLORS.darkGray,
-  },
-  tagRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginVertical: 4,
-  },
-  reviews: {
-    fontSize: 12,
-    color: COLORS.darkGray,
-  },
-  rate: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.red,
-  },
-  section: {
-    backgroundColor: COLORS.white,
-    marginTop: 10,
-    padding: 20,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.black,
-    marginBottom: 8,
-  },
-  bio: {
-    fontSize: 14,
-    color: COLORS.darkGray,
-    lineHeight: 20,
-  },
-  courseList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  courseTag: {
-    backgroundColor: COLORS.lightGray,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-  },
-  courseText: {
-    fontSize: 13,
-    color: COLORS.darkGray,
-    fontWeight: '500',
-  },
-  bookSection: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  bookBtn: {
-    backgroundColor: COLORS.red,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-    shadowColor: COLORS.red,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  bookBtnText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: '700',
-  },
+  screen: { flex: 1, backgroundColor: COLORS.lightGray },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  errorText: { fontSize: 16, color: COLORS.darkGray, marginBottom: 20, textAlign: 'center' },
+  retryButton: { backgroundColor: COLORS.red, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
+  retryButtonText: { color: COLORS.white, fontWeight: '600' },
+  heroCard: { backgroundColor: COLORS.white, alignItems: 'center', padding: 28, gap: 6 },
+  name: { fontSize: 22, fontWeight: '800', color: COLORS.black, marginTop: 8 },
+  year: { fontSize: 14, color: COLORS.darkGray },
+  tagRow: { flexDirection: 'row', gap: 8, marginVertical: 4 },
+  reviews: { fontSize: 12, color: COLORS.darkGray },
+  rate: { fontSize: 18, fontWeight: '700', color: COLORS.red },
+  section: { backgroundColor: COLORS.white, marginTop: 10, padding: 20 },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: COLORS.black, marginBottom: 8 },
+  bio: { fontSize: 14, color: COLORS.darkGray, lineHeight: 20 },
+  courseList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  courseTag: { backgroundColor: COLORS.lightGray, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 5 },
+  courseText: { fontSize: 13, color: COLORS.darkGray, fontWeight: '500' },
+  bookSection: { padding: 20, paddingBottom: 40 },
+  bookBtn: { backgroundColor: COLORS.red, borderRadius: 14, paddingVertical: 16, alignItems: 'center', shadowColor: COLORS.red, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 4 },
+  bookBtnText: { color: COLORS.white, fontSize: 16, fontWeight: '700' },
 });
 
 export default TutorProfileScreen;

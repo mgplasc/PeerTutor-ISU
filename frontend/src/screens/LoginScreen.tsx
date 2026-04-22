@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity,
   ScrollView, StyleSheet, Alert, ActivityIndicator,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { COLORS } from '../constants/colors';
 import { registerUser, checkEmailAvailable, loginUser } from '../services/authService';
 import { AuthUser, useAuth } from '../context/AuthContext';
@@ -40,6 +41,11 @@ function LoginScreen({ navigation }: LoginScreenProps) {
   const [selectedCourseIds, setSelectedCourseIds] = useState<number[]>([]);
   const [onlineAvail, setOnlineAvail] = useState(false);
   const [inPersonAvail, setInPersonAvail] = useState(false);
+
+  // password visibility states
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showStudentPassword, setShowStudentPassword] = useState(false);
+  const [showTutorPassword, setShowTutorPassword] = useState(false);
 
   async function handleLogin() {
     if (email === '' || password === '') {
@@ -118,7 +124,6 @@ function LoginScreen({ navigation }: LoginScreenProps) {
       const parsedRate = parseFloat(hourlyRate);
       const resolvedHourlyRate = Number.isNaN(parsedRate) ? 0 : parsedRate;
 
-      // Build payload matching backend SignupRequest
       const payload: any = {
         firstName,
         lastName,
@@ -133,9 +138,8 @@ function LoginScreen({ navigation }: LoginScreenProps) {
       if (profileType === 'STUDENT') {
         payload.expectedGraduation = expectedGraduation;
       } else {
-        // TUTOR: use courseIds (array of numbers) – backend expects List<Long>
         payload.hourlyRate = resolvedHourlyRate;
-        payload.courseIds = selectedCourseIds;  // ✅ now matches backend field name
+        payload.courseIds = selectedCourseIds;
       }
 
       const signupResult = await registerUser(payload);
@@ -248,14 +252,26 @@ function LoginScreen({ navigation }: LoginScreenProps) {
               autoCapitalize="none"
             />
             <Text style={styles.fieldLabel}>Password</Text>
-            <TextInput
-              style={styles.input}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Password"
-              placeholderTextColor={COLORS.darkGray}
-              secureTextEntry={true}
-            />
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Password"
+                placeholderTextColor={COLORS.darkGray}
+                secureTextEntry={!showLoginPassword}
+              />
+              <TouchableOpacity
+                onPress={() => setShowLoginPassword(!showLoginPassword)}
+                style={styles.eyeIcon}
+              >
+                <Icon
+                  name={showLoginPassword ? "visibility-off" : "visibility"}
+                  size={24}
+                  color={COLORS.darkGray}
+                />
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity
               style={styles.forgotLink}
               onPress={() => navigation.navigate('ForgotPassword')}
@@ -295,14 +311,26 @@ function LoginScreen({ navigation }: LoginScreenProps) {
               autoCapitalize="none"
             />
             <Text style={styles.fieldLabel}>Password (min 8 characters)</Text>
-            <TextInput
-              style={styles.input}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Password"
-              placeholderTextColor={COLORS.darkGray}
-              secureTextEntry={true}
-            />
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Password"
+                placeholderTextColor={COLORS.darkGray}
+                secureTextEntry={!showStudentPassword}
+              />
+              <TouchableOpacity
+                onPress={() => setShowStudentPassword(!showStudentPassword)}
+                style={styles.eyeIcon}
+              >
+                <Icon
+                  name={showStudentPassword ? "visibility-off" : "visibility"}
+                  size={24}
+                  color={COLORS.darkGray}
+                />
+              </TouchableOpacity>
+            </View>
             {loading ? (
               <ActivityIndicator color={COLORS.red} style={styles.spinner} />
             ) : (
@@ -360,14 +388,26 @@ function LoginScreen({ navigation }: LoginScreenProps) {
               autoCapitalize="none"
             />
             <Text style={styles.fieldLabel}>Password (min 8 characters)</Text>
-            <TextInput
-              style={styles.input}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Password"
-              placeholderTextColor={COLORS.darkGray}
-              secureTextEntry={true}
-            />
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Password"
+                placeholderTextColor={COLORS.darkGray}
+                secureTextEntry={!showTutorPassword}
+              />
+              <TouchableOpacity
+                onPress={() => setShowTutorPassword(!showTutorPassword)}
+                style={styles.eyeIcon}
+              >
+                <Icon
+                  name={showTutorPassword ? "visibility-off" : "visibility"}
+                  size={24}
+                  color={COLORS.darkGray}
+                />
+              </TouchableOpacity>
+            </View>
             {loading ? (
               <ActivityIndicator color={COLORS.red} style={styles.spinner} />
             ) : (
@@ -460,6 +500,24 @@ const styles = StyleSheet.create({
     color: COLORS.black,
     borderWidth: 1,
     borderColor: COLORS.medGray,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.lightGray,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.medGray,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: COLORS.black,
+  },
+  eyeIcon: {
+    padding: 10,
   },
   forgotLink: {
     alignSelf: 'flex-end',
