@@ -50,6 +50,10 @@ export interface VerifyEmailResponse {
   email?: string;
 }
 
+export interface DeleteAccountRequest{
+  deleteType: "STUDENT" | "TUTOR" | "BOTH";
+}
+
 // ============== API Functions ==============
 
 /**
@@ -140,4 +144,16 @@ export async function resetPassword(token: string, newPassword: string): Promise
     console.error('Password reset failed:', error);
     throw error;
   }
+}
+
+/**
+ * Delete user account
+ * @param deleteType 
+ * @returns 
+ */
+export async function deleteAccount(deleteType: string): Promise<any> {
+  const response = await api.delete('/auth/delete-account', {
+    data: { deleteType }
+  });
+  return response.data;
 }

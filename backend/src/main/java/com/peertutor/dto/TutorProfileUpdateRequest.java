@@ -1,4 +1,3 @@
-// DTO for updating tutor profiles, extending the base ProfileUpdateRequest with tutor-specific fields
 package com.peertutor.dto;
 
 import java.util.List;
@@ -11,8 +10,12 @@ public class TutorProfileUpdateRequest extends ProfileUpdateRequest {
     private Boolean availableForOnline;
     private Boolean availableForInPerson;
     private List<Long> courseIds;
+    
+    // Explicitly redeclare bio and profilePhotoUrl
+    private String bio;
+    private String profilePhotoUrl;
 
-    // Getters and Setters
+    // Getters and Setters (include all)
     public String getFirstName() { return firstName; }
     public void setFirstName(String firstName) { this.firstName = firstName; }
 
@@ -31,6 +34,12 @@ public class TutorProfileUpdateRequest extends ProfileUpdateRequest {
     public Boolean getAvailableForInPerson() { return availableForInPerson; }
     public void setAvailableForInPerson(Boolean availableForInPerson) { this.availableForInPerson = availableForInPerson; }
 
-    public List<Long> getCourseIds() { return courseIds; }  
+    public List<Long> getCourseIds() { return courseIds; }
     public void setCourseIds(List<Long> courseIds) { this.courseIds = courseIds; }
+    
+    public String getBio() { return bio; }
+    public void setBio(String bio) { this.bio = bio; }
+    
+    public String getProfilePhotoUrl() { return profilePhotoUrl; }
+    public void setProfilePhotoUrl(String profilePhotoUrl) { this.profilePhotoUrl = profilePhotoUrl; }
 }

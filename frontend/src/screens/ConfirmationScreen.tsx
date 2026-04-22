@@ -1,13 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { COLORS } from '../constants/colors';
-
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { HomeStackParamList } from '../navigation/AppNavigator'; 
-
-type TutorProfileScreenProps = NativeStackScreenProps<HomeStackParamList, 'TutorProfile'>;
-type BookingScreenProps = NativeStackScreenProps<HomeStackParamList, 'Booking'>;
-type ConfirmationScreenProps = NativeStackScreenProps<HomeStackParamList, 'Confirmation'>;
+import { HomeStackParamList } from '../navigation/AppNavigator';
 
 type Tutor = {
   firstName: string;
@@ -17,27 +12,11 @@ type Tutor = {
   avatarBg: string;
 };
 
-type ConfirmationScreenProps = {
-  route: {
-    params: {
-      tutor: Tutor;
-      date: string;
-      time: string;
-      mode: string;
-      course?: string;
-    };
-  };
-  navigation: {
-    navigate: (screen: string) => void;
-  };
-};
+type ConfirmationScreenProps = NativeStackScreenProps<HomeStackParamList, 'Confirmation'>;
 
 function ConfirmationScreen({ route, navigation }: ConfirmationScreenProps) {
-  const tutor = route.params.tutor;
-  const date = route.params.date;
-  const time = route.params.time;
-  const mode = route.params.mode;
-  const name = tutor.firstName + ' ' + tutor.lastName;
+  const { tutor, date, time, mode } = route.params;
+  const name = `${tutor.firstName} ${tutor.lastName}`;
 
   return (
     <View style={styles.screen}>
@@ -75,14 +54,14 @@ function ConfirmationScreen({ route, navigation }: ConfirmationScreenProps) {
 
         <TouchableOpacity
           style={styles.homeBtn}
-          onPress={function() { navigation.navigate('Home'); }}
+          onPress={() => navigation.navigate('Home')}
         >
           <Text style={styles.homeBtnText}>Back to Home</Text>
         </TouchableOpacity>
 
-       <TouchableOpacity
-        style={styles.messagesBtn}
-        onPress={() => navigation.getParent()?.navigate('Messages')}
+        <TouchableOpacity
+          style={styles.messagesBtn}
+          onPress={() => navigation.getParent()?.navigate('Messages')}
         >
           <Text style={styles.messagesBtnText}>Message Tutor</Text>
         </TouchableOpacity>

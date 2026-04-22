@@ -1,12 +1,13 @@
 import React, { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
-  View, Text, FlatList, StyleSheet,
-  ActivityIndicator, TouchableOpacity, ScrollView, Dimensions,
+  View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity,
+  ScrollView, Dimensions, Linking, Alert, Modal,
 } from 'react-native';
 import { COLORS } from '../constants/colors';
-import { getSessionsForUser, confirmSession, declineSession, SessionDto } from '../services/sessionService';
+import { getSessionsForUser, confirmSession, declineSession, submitFeedback, SessionDto } from '../services/sessionService';
 import { useAuth } from '../context/AuthContext';
+import FeedbackModal from '../components/FeedbackModal';
 
 type CalendarMode = 'list' | 'week' | 'month';
 type StatusFilter = 'all' | 'upcoming' | 'pending' | 'completed';
@@ -27,8 +28,12 @@ function CalendarScreen() {
   const [calendarMode, setCalendarMode] = useState<CalendarMode>('list');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('upcoming');
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [feedbackSession, setFeedbackSession] = useState<SessionDto | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedDateSessions, setSelectedDateSessions] = useState<SessionDto[]>([]);
+  const [selectedDateLabel, setSelectedDateLabel] = useState('');
 
-  useFocusEffect(useCallback(function() {
+  useFocusEffect(useCallback(() => {
     loadSessions();
   }, []));
 
@@ -46,52 +51,50 @@ function CalendarScreen() {
   function getFilteredSessions() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return sessions.filter(function(s) {
+    return sessions.filter(s => {
       if (statusFilter === 'upcoming') {
         const d = new Date(s.sessionDate + 'T23:59:59');
         return (s.status === 'CONFIRMED' || s.status === 'PENDING') && d >= today;
       }
-      if (statusFilter === 'pending') { return s.status === 'PENDING'; }
-      if (statusFilter === 'completed') {
-        return s.status === 'COMPLETED' || s.status === 'DECLINED';
-      }
+      if (statusFilter === 'pending') return s.status === 'PENDING';
+      if (statusFilter === 'completed') return s.status === 'COMPLETED' || s.status === 'DECLINED';
       return true;
     });
   }
 
   function getSessionsForDate(dateStr: string) {
-    return sessions.filter(function(s) { return s.sessionDate === dateStr; });
+    return sessions.filter(s => s.sessionDate === dateStr);
   }
 
   function formatDateStr(date: Date) {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const d = String(date.getDate()).padStart(2, '0');
-    return y + '-' + m + '-' + d;
+    return `${y}-${m}-${d}`;
   }
 
   function getStatusColor(status: string) {
-    if (status === 'CONFIRMED') { return COLORS.green; }
-    if (status === 'PENDING') { return COLORS.warning; }
-    if (status === 'DECLINED') { return COLORS.error; }
-    if (status === 'COMPLETED') { return COLORS.darkGray; }
+    if (status === 'CONFIRMED') return COLORS.green;
+    if (status === 'PENDING') return COLORS.warning;
+    if (status === 'DECLINED') return COLORS.error;
+    if (status === 'COMPLETED') return COLORS.darkGray;
     return COLORS.darkGray;
   }
 
   function getStatusLabel(status: string) {
-    if (status === 'CONFIRMED') { return 'Confirmed'; }
-    if (status === 'PENDING') { return 'Pending'; }
-    if (status === 'DECLINED') { return 'Declined'; }
-    if (status === 'COMPLETED') { return 'Completed'; }
+    if (status === 'CONFIRMED') return 'Confirmed';
+    if (status === 'PENDING') return 'Pending';
+    if (status === 'DECLINED') return 'Declined';
+    if (status === 'COMPLETED') return 'Completed';
     return status;
   }
 
   function getOtherPersonName(session: SessionDto) {
     const myId = auth.user.id;
     if (session.studentId === myId) {
-      return (session.tutorFirstName || '') + ' ' + (session.tutorLastName || '');
+      return `${session.tutorFirstName || ''} ${session.tutorLastName || ''}`.trim();
     }
-    return (session.studentFirstName || '') + ' ' + (session.studentLastName || '');
+    return `${session.studentFirstName || ''} ${session.studentLastName || ''}`.trim();
   }
 
   async function handleConfirm(sessionId: string) {
@@ -99,7 +102,6 @@ function CalendarScreen() {
       await confirmSession(sessionId);
       loadSessions();
     } catch {
-      // silently refresh so UI stays consistent
       loadSessions();
     }
   }
@@ -113,15 +115,52 @@ function CalendarScreen() {
     }
   }
 
-  // SESSION CARD
-  function renderSessionCard(session: SessionDto) {
+  function handleJoinZoom(zoomLink: string) {
+    if (!zoomLink) {
+      Alert.alert('Zoom link not available', 'Please contact the tutor.');
+      return;
+    }
+    Linking.openURL(zoomLink).catch(() => {
+      Alert.alert('Error', 'Could not open Zoom link.');
+    });
+  }
+
+  async function handleFeedbackSubmit(sessionId: string, rating: number, notes: string) {
+    try {
+      await submitFeedback(sessionId, rating, notes);
+      Alert.alert('Thank you', 'Your feedback has been submitted.');
+      loadSessions();
+      setFeedbackSession(null);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to submit feedback. Please try again.');
+    }
+  }
+
+  function isSessionCompleted(session: SessionDto) {
+    const sessionDateTime = new Date(session.sessionDate + 'T' + session.sessionTime);
+    const now = new Date();
+    return session.status === 'CONFIRMED' && sessionDateTime < now;
+  }
+
+  function openDaySessions(date: Date) {
+    const dateStr = formatDateStr(date);
+    const daySessions = getSessionsForDate(dateStr);
+    if (daySessions.length === 0) return;
+    setSelectedDateSessions(daySessions);
+    setSelectedDateLabel(date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }));
+    setModalVisible(true);
+  }
+
+  function renderSessionCard(session: SessionDto, isModal = false) {
     const otherName = getOtherPersonName(session);
     const statusColor = getStatusColor(session.status);
     const isTutor = session.tutorId === auth.user.id;
     const showActions = isTutor && session.status === 'PENDING';
+    const showZoom = session.mode === 'Online' && session.status === 'CONFIRMED' && session.zoomLink;
+    const showFeedback = isSessionCompleted(session) && !session.feedbackGiven;
 
     return (
-      <View key={session.id} style={styles.sessionCard}>
+      <View key={session.id} style={[styles.sessionCard, isModal && styles.modalSessionCard]}>
         <View style={[styles.sessionStatusBar, { backgroundColor: statusColor }]} />
         <View style={styles.sessionContent}>
           <View style={styles.sessionTopRow}>
@@ -132,26 +171,32 @@ function CalendarScreen() {
               </Text>
             </View>
           </View>
-          <Text style={styles.sessionPerson}>{otherName.trim()}</Text>
+          <Text style={styles.sessionPerson}>{otherName}</Text>
           <Text style={styles.sessionDateTime}>
             {session.sessionDate} · {session.sessionTime} · {session.mode}
           </Text>
           {showActions && (
             <View style={styles.actionRow}>
-              <TouchableOpacity
-                style={styles.acceptBtn}
-                onPress={function() { handleConfirm(session.id); }}
-                activeOpacity={0.8}
-              >
+              <TouchableOpacity style={styles.acceptBtn} onPress={() => handleConfirm(session.id)}>
                 <Text style={styles.acceptBtnText}>Accept</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.declineBtn}
-                onPress={function() { handleDecline(session.id); }}
-                activeOpacity={0.8}
-              >
+              <TouchableOpacity style={styles.declineBtn} onPress={() => handleDecline(session.id)}>
                 <Text style={styles.declineBtnText}>Decline</Text>
               </TouchableOpacity>
+            </View>
+          )}
+          {(showZoom || showFeedback) && (
+            <View style={styles.extraButtonsRow}>
+              {showZoom && (
+                <TouchableOpacity style={styles.zoomBtn} onPress={() => handleJoinZoom(session.zoomLink!)}>
+                  <Text style={styles.zoomBtnText}>Join Zoom Session</Text>
+                </TouchableOpacity>
+              )}
+              {showFeedback && (
+                <TouchableOpacity style={styles.feedbackBtn} onPress={() => setFeedbackSession(session)}>
+                  <Text style={styles.feedbackBtnText}>Leave Feedback</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </View>
@@ -159,7 +204,6 @@ function CalendarScreen() {
     );
   }
 
-  // WEEK VIEW
   function getWeekDates(baseDate: Date) {
     const start = new Date(baseDate);
     start.setDate(start.getDate() - start.getDay());
@@ -176,9 +220,8 @@ function CalendarScreen() {
     const weekDates = getWeekDates(currentDate);
     const todayStr = formatDateStr(new Date());
 
-    // Collect all sessions for this week for the list below the grid
     const weekSessions: { date: Date; dateStr: string; sessions: SessionDto[] }[] = [];
-    weekDates.forEach(function(date) {
+    weekDates.forEach(date => {
       const dateStr = formatDateStr(date);
       const daySessions = getSessionsForDate(dateStr);
       if (daySessions.length > 0) {
@@ -189,14 +232,11 @@ function CalendarScreen() {
     return (
       <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.calNavRow}>
-          <TouchableOpacity
-            style={styles.calNavBtn}
-            onPress={function() {
-              const d = new Date(currentDate);
-              d.setDate(d.getDate() - 7);
-              setCurrentDate(d);
-            }}
-          >
+          <TouchableOpacity style={styles.calNavBtn} onPress={() => {
+            const d = new Date(currentDate);
+            d.setDate(d.getDate() - 7);
+            setCurrentDate(d);
+          }}>
             <Text style={styles.calNavText}>‹ Prev</Text>
           </TouchableOpacity>
           <Text style={styles.calNavTitle}>
@@ -204,26 +244,27 @@ function CalendarScreen() {
             {MONTHS[weekDates[6].getMonth()].slice(0, 3)} {weekDates[6].getDate()},{' '}
             {weekDates[6].getFullYear()}
           </Text>
-          <TouchableOpacity
-            style={styles.calNavBtn}
-            onPress={function() {
-              const d = new Date(currentDate);
-              d.setDate(d.getDate() + 7);
-              setCurrentDate(d);
-            }}
-          >
+          <TouchableOpacity style={styles.calNavBtn} onPress={() => {
+            const d = new Date(currentDate);
+            d.setDate(d.getDate() + 7);
+            setCurrentDate(d);
+          }}>
             <Text style={styles.calNavText}>Next ›</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Week grid */}
         <View style={styles.weekGrid}>
-          {weekDates.map(function(date) {
+          {weekDates.map(date => {
             const dateStr = formatDateStr(date);
             const daySessions = getSessionsForDate(dateStr);
             const isToday = dateStr === todayStr;
             return (
-              <View key={dateStr} style={styles.weekDayCol}>
+              <TouchableOpacity
+                key={dateStr}
+                style={styles.weekDayCol}
+                onPress={() => openDaySessions(date)}
+                disabled={daySessions.length === 0}
+              >
                 <Text style={[styles.weekDayLabel, isToday && styles.weekDayLabelToday]}>
                   {DAYS[date.getDay()].slice(0, 1)}
                 </Text>
@@ -232,44 +273,35 @@ function CalendarScreen() {
                     {date.getDate()}
                   </Text>
                 </View>
-                {daySessions.slice(0, 2).map(function(s) {
-                  return (
-                    <View
-                      key={s.id}
-                      style={[styles.weekDot, { backgroundColor: getStatusColor(s.status) }]}
-                    />
-                  );
-                })}
+                {daySessions.slice(0, 2).map(s => (
+                  <View key={s.id} style={[styles.weekDot, { backgroundColor: getStatusColor(s.status) }]} />
+                ))}
                 {daySessions.length > 2 && (
                   <Text style={styles.weekMoreText}>+{daySessions.length - 2}</Text>
                 )}
-              </View>
+              </TouchableOpacity>
             );
           })}
         </View>
 
-        {/* Sessions list for this week */}
         <Text style={styles.sectionLabel}>This Week</Text>
         {weekSessions.length === 0 ? (
           <Text style={styles.empty}>No sessions this week.</Text>
         ) : (
-          weekSessions.map(function(group) {
-            return (
-              <View key={group.dateStr}>
-                <Text style={styles.weekDateLabel}>
-                  {DAYS[group.date.getDay()]}, {MONTHS[group.date.getMonth()]} {group.date.getDate()}
-                </Text>
-                {group.sessions.map(function(s) { return renderSessionCard(s); })}
-              </View>
-            );
-          })
+          weekSessions.map(group => (
+            <View key={group.dateStr}>
+              <Text style={styles.weekDateLabel}>
+                {DAYS[group.date.getDay()]}, {MONTHS[group.date.getMonth()]} {group.date.getDate()}
+              </Text>
+              {group.sessions.map(s => renderSessionCard(s))}
+            </View>
+          ))
         )}
         <View style={styles.bottomPad} />
       </ScrollView>
     );
   }
 
-  // MONTH VIEW
   function renderMonthView() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -278,117 +310,97 @@ function CalendarScreen() {
     const todayStr = formatDateStr(new Date());
 
     const cells: (number | null)[] = [];
-    for (let i = 0; i < firstDay; i++) { cells.push(null); }
-    for (let d = 1; d <= daysInMonth; d++) { cells.push(d); }
-    // Pad to complete last row
-    while (cells.length % 7 !== 0) { cells.push(null); }
+    for (let i = 0; i < firstDay; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+    while (cells.length % 7 !== 0) cells.push(null);
 
     return (
       <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.calNavRow}>
-          <TouchableOpacity
-            style={styles.calNavBtn}
-            onPress={function() {
-              const d = new Date(currentDate);
-              d.setMonth(d.getMonth() - 1);
-              setCurrentDate(d);
-            }}
-          >
+          <TouchableOpacity style={styles.calNavBtn} onPress={() => {
+            const d = new Date(currentDate);
+            d.setMonth(d.getMonth() - 1);
+            setCurrentDate(d);
+          }}>
             <Text style={styles.calNavText}>‹ Prev</Text>
           </TouchableOpacity>
           <Text style={styles.calNavTitle}>{MONTHS[month]} {year}</Text>
-          <TouchableOpacity
-            style={styles.calNavBtn}
-            onPress={function() {
-              const d = new Date(currentDate);
-              d.setMonth(d.getMonth() + 1);
-              setCurrentDate(d);
-            }}
-          >
+          <TouchableOpacity style={styles.calNavBtn} onPress={() => {
+            const d = new Date(currentDate);
+            d.setMonth(d.getMonth() + 1);
+            setCurrentDate(d);
+          }}>
             <Text style={styles.calNavText}>Next ›</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Day headers */}
         <View style={styles.monthDayHeaders}>
-          {DAYS.map(function(day) {
-            return (
-              <View key={day} style={styles.monthHeaderCell}>
-                <Text style={styles.monthDayHeader}>{day.slice(0, 1)}</Text>
-              </View>
-            );
-          })}
+          {DAYS.map(day => (
+            <View key={day} style={styles.monthHeaderCell}>
+              <Text style={styles.monthDayHeader}>{day.slice(0, 1)}</Text>
+            </View>
+          ))}
         </View>
 
-        {/* Month grid */}
         <View style={styles.monthGrid}>
-          {cells.map(function(day, index) {
+          {cells.map((day, index) => {
             if (day === null) {
-              return <View key={'e-' + index} style={styles.monthCell} />;
+              return <View key={`e-${index}`} style={styles.monthCell} />;
             }
-            const dateStr = year + '-' +
-              String(month + 1).padStart(2, '0') + '-' +
-              String(day).padStart(2, '0');
+            const date = new Date(year, month, day);
+            const dateStr = formatDateStr(date);
             const daySessions = getSessionsForDate(dateStr);
             const isToday = dateStr === todayStr;
             return (
-              <View key={dateStr} style={styles.monthCell}>
+              <TouchableOpacity
+                key={dateStr}
+                style={styles.monthCell}
+                onPress={() => openDaySessions(date)}
+                disabled={daySessions.length === 0}
+              >
                 <View style={[styles.monthDayInner, isToday && styles.monthDayInnerToday]}>
                   <Text style={[styles.monthDayNum, isToday && styles.monthDayNumToday]}>
                     {day}
                   </Text>
                 </View>
                 <View style={styles.monthDots}>
-                  {daySessions.slice(0, 3).map(function(s) {
-                    return (
-                      <View
-                        key={s.id}
-                        style={[styles.monthDot, { backgroundColor: getStatusColor(s.status) }]}
-                      />
-                    );
-                  })}
+                  {daySessions.slice(0, 3).map(s => (
+                    <View key={s.id} style={[styles.monthDot, { backgroundColor: getStatusColor(s.status) }]} />
+                  ))}
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </View>
 
-        {/* Legend */}
         <View style={styles.legend}>
           {[
             { label: 'Confirmed', color: COLORS.green },
             { label: 'Pending', color: COLORS.warning },
             { label: 'Completed', color: COLORS.darkGray },
-          ].map(function(item) {
-            return (
-              <View key={item.label} style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: item.color }]} />
-                <Text style={styles.legendText}>{item.label}</Text>
-              </View>
-            );
-          })}
+          ].map(item => (
+            <View key={item.label} style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+              <Text style={styles.legendText}>{item.label}</Text>
+            </View>
+          ))}
         </View>
         <View style={styles.bottomPad} />
       </ScrollView>
     );
   }
 
-  // LIST VIEW
   function renderListView() {
     const filtered = getFilteredSessions();
     return (
       <FlatList
         data={filtered}
-        keyExtractor={function(item: SessionDto) { return item.id; }}
+        keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}
         onRefresh={loadSessions}
         refreshing={loading}
-        renderItem={function({ item }: { item: SessionDto }) {
-          return renderSessionCard(item);
-        }}
-        ListEmptyComponent={
-          <Text style={styles.empty}>No sessions found.</Text>
-        }
+        renderItem={({ item }) => renderSessionCard(item)}
+        ListEmptyComponent={<Text style={styles.empty}>No sessions found.</Text>}
       />
     );
   }
@@ -397,38 +409,34 @@ function CalendarScreen() {
     <View style={styles.header}>
       <Text style={styles.headerTitle}>My Sessions</Text>
       <View style={styles.modeRow}>
-        {(['list', 'week', 'month'] as CalendarMode[]).map(function(mode) {
-          return (
-            <TouchableOpacity
-              key={mode}
-              style={[styles.modeBtn, calendarMode === mode && styles.modeBtnActive]}
-              onPress={function() { setCalendarMode(mode); }}
-            >
-              <Text style={[styles.modeBtnText, calendarMode === mode && styles.modeBtnTextActive]}>
-                {mode.charAt(0).toUpperCase() + mode.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+        {(['list', 'week', 'month'] as CalendarMode[]).map(mode => (
+          <TouchableOpacity
+            key={mode}
+            style={[styles.modeBtn, calendarMode === mode && styles.modeBtnActive]}
+            onPress={() => setCalendarMode(mode)}
+          >
+            <Text style={[styles.modeBtnText, calendarMode === mode && styles.modeBtnTextActive]}>
+              {mode.charAt(0).toUpperCase() + mode.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
     </View>
   );
 
   const filterRow = calendarMode === 'list' ? (
     <View style={styles.filterRow}>
-      {(['upcoming', 'pending', 'completed', 'all'] as StatusFilter[]).map(function(f) {
-        return (
-          <TouchableOpacity
-            key={f}
-            style={[styles.filterBtn, statusFilter === f && styles.filterBtnActive]}
-            onPress={function() { setStatusFilter(f); }}
-          >
-            <Text style={[styles.filterText, statusFilter === f && styles.filterTextActive]}>
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
+      {(['upcoming', 'pending', 'completed', 'all'] as StatusFilter[]).map(f => (
+        <TouchableOpacity
+          key={f}
+          style={[styles.filterBtn, statusFilter === f && styles.filterBtnActive]}
+          onPress={() => setStatusFilter(f)}
+        >
+          <Text style={[styles.filterText, statusFilter === f && styles.filterTextActive]}>
+            {f.charAt(0).toUpperCase() + f.slice(1)}
+          </Text>
+        </TouchableOpacity>
+      ))}
     </View>
   ) : null;
 
@@ -441,17 +449,45 @@ function CalendarScreen() {
     );
   }
 
+  const modalContent = (
+    <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => setModalVisible(false)}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{selectedDateLabel}</Text>
+            <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <Text style={styles.modalClose}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={selectedDateSessions}
+            keyExtractor={item => item.id}
+            renderItem={({ item }) => renderSessionCard(item, true)}
+            contentContainerStyle={styles.modalList}
+          />
+        </View>
+      </View>
+    </Modal>
+  );
+
   if (calendarMode === 'list') {
     return (
       <View style={styles.screen}>
         {header}
         {filterRow}
         {renderListView()}
+        {feedbackSession && (
+          <FeedbackModal
+            isVisible={true}
+            onClose={() => setFeedbackSession(null)}
+            onSubmit={(rating, notes) => handleFeedbackSubmit(feedbackSession.id, rating, notes)}
+          />
+        )}
+        {modalContent}
       </View>
     );
   }
 
-  // Week/Month
   return (
     <View style={styles.screen}>
       {header}
@@ -459,51 +495,37 @@ function CalendarScreen() {
         {calendarMode === 'week' && renderWeekView()}
         {calendarMode === 'month' && renderMonthView()}
       </View>
+      {feedbackSession && (
+        <FeedbackModal
+          isVisible={true}
+          onClose={() => setFeedbackSession(null)}
+          onSubmit={(rating, notes) => handleFeedbackSubmit(feedbackSession.id, rating, notes)}
+        />
+      )}
+      {modalContent}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.lightGray },
-
-  // Header
   header: { backgroundColor: COLORS.red, padding: 20, paddingTop: 50 },
   headerTitle: { fontSize: 22, fontWeight: '800', color: COLORS.white, marginBottom: 12 },
   modeRow: { flexDirection: 'row', gap: 6 },
-  modeBtn: {
-    paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
+  modeBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.2)' },
   modeBtnActive: { backgroundColor: COLORS.white },
   modeBtnText: { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.9)' },
   modeBtnTextActive: { color: COLORS.red },
-
-  // Filter row (list mode only)
   filterRow: { flexDirection: 'row', padding: 12, gap: 6, flexWrap: 'wrap', backgroundColor: COLORS.lightGray },
-  filterBtn: {
-    paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16,
-    backgroundColor: COLORS.white, borderWidth: 1.5, borderColor: COLORS.medGray,
-  },
+  filterBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, backgroundColor: COLORS.white, borderWidth: 1.5, borderColor: COLORS.medGray },
   filterBtnActive: { backgroundColor: COLORS.red, borderColor: COLORS.red },
   filterText: { fontSize: 12, fontWeight: '600', color: COLORS.darkGray },
   filterTextActive: { color: COLORS.white },
-
   spinner: { marginTop: 40 },
-
-  // List mode
   listContent: { padding: 12 },
-
-  // Week/Month wrapper
   calPadding: { flex: 1 },
   scrollContent: { flex: 1, paddingHorizontal: 12 },
-
-  // Session card
-  sessionCard: {
-    backgroundColor: COLORS.white, borderRadius: 14, marginBottom: 8,
-    flexDirection: 'row', overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
-  },
+  sessionCard: { backgroundColor: COLORS.white, borderRadius: 14, marginBottom: 8, flexDirection: 'row', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   sessionStatusBar: { width: 4 },
   sessionContent: { flex: 1, padding: 14 },
   sessionTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -512,96 +534,87 @@ const styles = StyleSheet.create({
   statusBadgeText: { fontSize: 11, fontWeight: '700' },
   sessionPerson: { fontSize: 13, color: COLORS.darkGray, marginTop: 3 },
   sessionDateTime: { fontSize: 12, color: COLORS.darkGray, marginTop: 2 },
-
   empty: { textAlign: 'center', color: COLORS.darkGray, marginTop: 40, fontSize: 14 },
   sectionLabel: { fontSize: 14, fontWeight: '700', color: COLORS.black, marginTop: 16, marginBottom: 8 },
   bottomPad: { height: 24 },
-
-  // Nav
-  calNavRow: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', paddingVertical: 12,
-  },
+  calNavRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 },
   calNavBtn: { padding: 8 },
   calNavText: { fontSize: 14, color: COLORS.red, fontWeight: '600' },
   calNavTitle: { fontSize: 15, fontWeight: '700', color: COLORS.black, textAlign: 'center', flex: 1 },
-
-  // Week view
-  weekGrid: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.white,
-    borderRadius: 12,
-    paddingVertical: 10,
-    marginBottom: 12,
-  },
-  weekDayCol: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 4,
-    gap: 4,
-  },
+  weekGrid: { flexDirection: 'row', backgroundColor: COLORS.white, borderRadius: 12, paddingVertical: 10, marginBottom: 12 },
+  weekDayCol: { flex: 1, alignItems: 'center', paddingVertical: 4, gap: 4 },
   weekDayLabel: { fontSize: 11, color: COLORS.darkGray, fontWeight: '600' },
   weekDayLabelToday: { color: COLORS.red },
-  weekDayCircle: {
-    width: 30, height: 30, borderRadius: 15,
-    alignItems: 'center', justifyContent: 'center',
-  },
+  weekDayCircle: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   weekDayCircleToday: { backgroundColor: COLORS.red },
   weekDayNum: { fontSize: 14, fontWeight: '600', color: COLORS.black },
   weekDayNumToday: { color: COLORS.white },
   weekDot: { width: 6, height: 6, borderRadius: 3 },
   weekMoreText: { fontSize: 9, color: COLORS.darkGray },
-  weekDateLabel: {
-    fontSize: 13, fontWeight: '600', color: COLORS.darkGray,
-    marginBottom: 6, marginTop: 8,
-  },
-
-  // Month view
+  weekDateLabel: { fontSize: 13, fontWeight: '600', color: COLORS.darkGray, marginBottom: 6, marginTop: 8 },
   monthDayHeaders: { flexDirection: 'row', marginBottom: 2 },
   monthHeaderCell: { width: CELL_WIDTH, alignItems: 'center', paddingVertical: 4 },
   monthDayHeader: { fontSize: 12, color: COLORS.darkGray, fontWeight: '600' },
-  monthGrid: {
-    flexDirection: 'row', flexWrap: 'wrap',
-    backgroundColor: COLORS.white, borderRadius: 12,
-    paddingVertical: 4,
-  },
-  monthCell: {
-    width: CELL_WIDTH,
-    height: CELL_WIDTH,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 4,
-  },
-  monthDayInner: {
-    width: 28, height: 28, borderRadius: 14,
-    alignItems: 'center', justifyContent: 'center',
-  },
+  monthGrid: { flexDirection: 'row', flexWrap: 'wrap', backgroundColor: COLORS.white, borderRadius: 12, paddingVertical: 4 },
+  monthCell: { width: CELL_WIDTH, height: CELL_WIDTH, alignItems: 'center', justifyContent: 'center', paddingVertical: 4 },
+  monthDayInner: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   monthDayInnerToday: { backgroundColor: COLORS.red },
   monthDayNum: { fontSize: 13, color: COLORS.black, fontWeight: '500' },
   monthDayNumToday: { color: COLORS.white, fontWeight: '800' },
   monthDots: { flexDirection: 'row', gap: 2, marginTop: 2, height: 6 },
   monthDot: { width: 5, height: 5, borderRadius: 3 },
-
-  legend: {
-    flexDirection: 'row', gap: 16, marginTop: 12,
-    paddingHorizontal: 4, paddingBottom: 4,
-  },
+  legend: { flexDirection: 'row', gap: 16, marginTop: 12, paddingHorizontal: 4, paddingBottom: 4 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { fontSize: 11, color: COLORS.darkGray },
-
-  // Accept / Decline buttons
   actionRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  acceptBtn: {
-    flex: 1, paddingVertical: 8, borderRadius: 8,
-    backgroundColor: COLORS.green, alignItems: 'center',
-  },
+  acceptBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, backgroundColor: COLORS.green, alignItems: 'center' },
   acceptBtnText: { color: COLORS.white, fontSize: 13, fontWeight: '700' },
-  declineBtn: {
-    flex: 1, paddingVertical: 8, borderRadius: 8,
-    borderWidth: 1.5, borderColor: COLORS.error, alignItems: 'center',
-  },
+  declineBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, borderWidth: 1.5, borderColor: COLORS.error, alignItems: 'center' },
   declineBtnText: { color: COLORS.error, fontSize: 13, fontWeight: '700' },
+  extraButtonsRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  zoomBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, backgroundColor: '#007AFF', alignItems: 'center' },
+  zoomBtnText: { color: COLORS.white, fontSize: 13, fontWeight: '700' },
+  feedbackBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, backgroundColor: '#4CAF50', alignItems: 'center' },
+  feedbackBtnText: { color: COLORS.white, fontSize: 13, fontWeight: '700' },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    width: '90%',
+    maxHeight: '80%',
+    padding: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.medGray,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.black,
+  },
+  modalClose: {
+    fontSize: 20,
+    color: COLORS.darkGray,
+    padding: 4,
+  },
+  modalList: {
+    paddingBottom: 8,
+  },
+  modalSessionCard: {
+    marginBottom: 8,
+  },
 });
 
 export default CalendarScreen;

@@ -1,54 +1,51 @@
 import api from './api';
 
-export type SessionDto = {
+export interface SessionDto {
   id: string;
   studentId: string;
-  studentFirstName: string;
-  studentLastName: string;
   tutorId: string;
-  tutorFirstName: string;
-  tutorLastName: string;
+  studentFirstName?: string;
+  studentLastName?: string;
+  tutorFirstName?: string;
+  tutorLastName?: string;
+  courseNumber: string;
+  sessionDate: string;      // YYYY-MM-DD
+  sessionTime: string;      // HH:MM
+  mode: string;             // 'Online' or 'In-Person'
+  status: string;           // 'PENDING', 'CONFIRMED', 'DECLINED', 'COMPLETED'
+  zoomLink?: string;        // Zoom meeting URL for online sessions
+  feedbackGiven?: boolean;  // Whether student has already left feedback
+}
+
+export interface BookSessionRequest {
+  tutorId: string;
   courseNumber: string;
   sessionDate: string;
   sessionTime: string;
   mode: string;
-  status: string;
-  createdAt: string;
-};
+  availabilitySlotId?: string; // optional, if you have slot-based booking
+}
 
-export type BookSessionPayload = {
-  tutorId: string;
-  courseNumber: string;
-  sessionDate: string;
-  sessionTime: string;
-  mode: string;
-};
-
-// GET /api/sessions — get all sessions for logged-in user
 export async function getSessionsForUser(userId: string): Promise<SessionDto[]> {
-  try {
-    const response = await api.get('/api/sessions');
-    return response.data as SessionDto[];
-  } catch (error) {
-    console.error('Failed to fetch sessions:', error);
-    return [];
-  }
+  const response = await api.get('/api/sessions');
+  return response.data;
 }
 
-// POST /api/sessions — book a new session
-export async function bookSession(payload: BookSessionPayload): Promise<SessionDto> {
-  const response = await api.post('/api/sessions', payload);
-  return response.data as SessionDto;
+export async function bookSession(request: BookSessionRequest): Promise<SessionDto> {
+  const response = await api.post('/api/sessions', request);
+  return response.data;
 }
 
-// POST /api/sessions/:id/confirm — tutor confirms a session
 export async function confirmSession(sessionId: string): Promise<SessionDto> {
-  const response = await api.post('/api/sessions/' + sessionId + '/confirm');
-  return response.data as SessionDto;
+  const response = await api.post(`/api/sessions/${sessionId}/confirm`);
+  return response.data;
 }
 
-// POST /api/sessions/:id/decline — tutor declines a session
 export async function declineSession(sessionId: string): Promise<SessionDto> {
-  const response = await api.post('/api/sessions/' + sessionId + '/decline');
-  return response.data as SessionDto;
+  const response = await api.post(`/api/sessions/${sessionId}/decline`);
+  return response.data;
+}
+
+export async function submitFeedback(sessionId: string, rating: number, notes: string): Promise<void> {
+  await api.post(`/api/feedback/session/${sessionId}`, { rating, notes });
 }

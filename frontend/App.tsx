@@ -7,11 +7,19 @@ import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 import VerificationScreen from './src/screens/VerificationScreen';
 import AppNavigator from './src/navigation/AppNavigator';
 
-const Stack = createNativeStackNavigator();
+// Define the param list for the root stack
+export type RootStackParamList = {
+  Login: undefined;
+  ForgotPassword: undefined;
+  Verification: { token: string };
+  Main: undefined;
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function RootNavigator() {
   const auth = useAuth();
-  const isLoggedIn = auth.user.id !== ''; //true;(temp for testing)
+  const isLoggedIn = auth.user.id !== '';
 
   return (
     <NavigationContainer>
@@ -34,7 +42,8 @@ function RootNavigator() {
             />
             <Stack.Screen
               name="Verification"
-              component={VerificationScreen}
+              // Cast to any to resolve type mismatch
+              component={VerificationScreen as any}
               options={{
                 headerShown: true,
                 headerTitle: 'Verify Email',

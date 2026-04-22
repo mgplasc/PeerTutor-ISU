@@ -18,11 +18,6 @@ public class TutorService {
     @Autowired
     private TutorProfileRepository tutorProfileRepository;
 
-    /**
-     * Returns all tutors, or filters by course number if one is provided.
-     * The courseNumber param is matched case-insensitively as a substring
-     * (e.g. "179" matches "IT 179").
-     */
     @Transactional(readOnly = true)
     public List<TutorProfileDto> getTutors(
             String courseNumber,
@@ -41,17 +36,19 @@ public class TutorService {
 
         return profiles.stream()
                 .filter(p -> {
-                    if (available == null || !available) return true;
-                    return Boolean.TRUE.equals(p.getAvailableForOnline())
-                        || Boolean.TRUE.equals(p.getAvailableForInPerson());
+                    if (available != null && available) {
+                        return Boolean.TRUE.equals(p.getAvailableForOnline())
+                                || Boolean.TRUE.equals(p.getAvailableForInPerson());
+                    }
+                    return true;
                 })
                 .filter(p -> {
                     if (sessionFormat == null || sessionFormat.isBlank()) return true;
                     return switch (sessionFormat.toLowerCase()) {
-                        case "online"   -> Boolean.TRUE.equals(p.getAvailableForOnline());
+                        case "online" -> Boolean.TRUE.equals(p.getAvailableForOnline());
                         case "inperson" -> Boolean.TRUE.equals(p.getAvailableForInPerson());
-                        case "both"     -> Boolean.TRUE.equals(p.getAvailableForOnline())
-                                        && Boolean.TRUE.equals(p.getAvailableForInPerson());
+                        case "both" -> Boolean.TRUE.equals(p.getAvailableForOnline())
+                                && Boolean.TRUE.equals(p.getAvailableForInPerson());
                         default -> true;
                     };
                 })
@@ -63,9 +60,6 @@ public class TutorService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Returns a single tutor profile by its UUID.
-     */
     @Transactional(readOnly = true)
     public Optional<TutorProfileDto> getTutorById(UUID id) {
         return tutorProfileRepository.findById(id)

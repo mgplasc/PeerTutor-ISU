@@ -2,6 +2,7 @@ package com.peertutor.service;
 
 import com.peertutor.model.Session;
 import com.peertutor.repository.SessionRepository;
+import com.peertutor.repository.FeedbackRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,7 +10,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -25,8 +29,16 @@ public class ReminderService {
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private FeedbackRepository feedbackRepository;
+
+    @Autowired
+    private FcmService fcmService;   // <-- ADDED
+
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MMM dd, yyyy");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("h:mm a");
+
+    private boolean feedbackReminderSent = false;
 
     @Scheduled(cron = "0 0 * * * *")
     @Transactional
@@ -70,6 +82,38 @@ public class ReminderService {
 
                 session.setReminderSent(true);
                 sessionRepository.save(session);
+            }
+        }
+    }
+
+    @Scheduled(cron = "0 0 * * * *")
+    @Transactional
+    public void sendFeedbackRequests() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime twoHoursAgo = now.minusHours(2);
+        LocalDateTime oneHourAgo = now.minusHours(1);
+
+        // Convert LocalDateTime to LocalDate + LocalTime for the query
+        LocalDate startDate = twoHoursAgo.toLocalDate();
+        LocalTime startTime = twoHoursAgo.toLocalTime();
+        LocalDate endDate = oneHourAgo.toLocalDate();
+        LocalTime endTime = oneHourAgo.toLocalTime();
+
+        List<Session> completedSessions = sessionRepository.findByStatusAndDateTimeRange(
+                "CONFIRMED", startDate, startTime, endDate, endTime
+        );
+
+        for (Session session : completedSessions) {
+            if (!feedbackRepository.existsBySessionId(session.getId())) {
+                // Send push notification to student
+                String title = "Rate Your Tutoring Session";
+                String body = "How was your session for " + session.getCourseNumber() + "? Tap to leave feedback.";
+
+                // Use fcmService (now injected)
+                if (session.getStudent().getDeviceToken() != null && !session.getStudent().getDeviceToken().isEmpty()) {
+                    fcmService.sendPush(session.getStudent().getDeviceToken(), title, body);
+                }
+                feedbackReminderSent = true;
             }
         }
     }

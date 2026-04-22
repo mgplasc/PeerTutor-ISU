@@ -17,6 +17,8 @@ public class SessionDto {
     private String mode;
     private String status;
     private String createdAt;
+    private String zoomLink;
+    private boolean feedbackGiven;
 
     public SessionDto() {}
 
@@ -30,21 +32,19 @@ public class SessionDto {
         this.mode = session.getMode();
         this.status = session.getStatus();
         this.createdAt = session.getCreatedAt().toString();
+        this.zoomLink = session.getZoomLink();
 
-        // student name from student profile if available
         if (session.getStudent().getStudentProfile() != null) {
             this.studentFirstName = session.getStudent().getStudentProfile().getFirstName();
             this.studentLastName = session.getStudent().getStudentProfile().getLastName();
         }
-
-        // tutor name from tutor profile if available
         if (session.getTutor().getTutorProfile() != null) {
             this.tutorFirstName = session.getTutor().getTutorProfile().getFirstName();
             this.tutorLastName = session.getTutor().getTutorProfile().getLastName();
         }
     }
 
-    // getters and setters
+    // Getters and setters
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
     public String getStudentId() { return studentId; }
@@ -71,4 +71,8 @@ public class SessionDto {
     public void setStatus(String status) { this.status = status; }
     public String getCreatedAt() { return createdAt; }
     public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+    public String getZoomLink() { return zoomLink; }
+    public void setZoomLink(String zoomLink) { this.zoomLink = zoomLink; }
+    public boolean isFeedbackGiven() { return feedbackGiven; }
+    public void setFeedbackGiven(boolean feedbackGiven) { this.feedbackGiven = feedbackGiven; }
 }

@@ -21,6 +21,6 @@ async function getFcmToken(): Promise<string> {
 export async function registerDeviceToken(apiClient: AxiosInstance): Promise<void> {
   const token = await getFcmToken();
   if (token && apiClient) {
-    await apiClient.post('/users/device-token', { deviceToken: token });
+    await apiClient.post('/api/users/device-token', { deviceToken: token });
   }
 }

@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { COLORS } from '../constants/colors';
 import Avatar from './Avatar';
 import StarRating from './StarRating';
 import Tag from './Tag';
-import { joinZoomSession } from '../services/zoomHelper';
-import FeedbackModal from './FeedbackModal'; // Adjust path if needed, but they are both in 'components'
 
 type Tutor = {
   id: string;
@@ -29,8 +27,6 @@ type TutorCardProps = {
 
 function TutorCard(props: TutorCardProps) {
   const tutor = props.tutor;
-  // This creates a memory variable called 'isFeedbackVisible' that starts as false (hidden)
-  const [isFeedbackVisible, setIsFeedbackVisible] = useState(false);
   const name = tutor.firstName + ' ' + tutor.lastName;
 
   let modeTagType = 'blue';
@@ -54,7 +50,6 @@ function TutorCard(props: TutorCardProps) {
         <Tag text={tutor.mode} type={modeTagType} />
       </View>
 
-      {/* TODO: replace temp courses with tutor.coursesOffered from backend */}
       <View style={styles.courses}>
         {tutor.courses.slice(0, 3).map(function(course) {
           return (
@@ -64,44 +59,6 @@ function TutorCard(props: TutorCardProps) {
           );
         })}
       </View>
-     {/* Zoom Join Button */}
-     <TouchableOpacity 
-        style={{
-          backgroundColor: '#007AFF', 
-          padding: 12, 
-          borderRadius: 8, 
-          alignItems: 'center',
-          marginTop: 15
-        }} 
-        onPress={(e) => { 
-          e.stopPropagation(); 
-          joinZoomSession('1234567890', 'OptionalPassword123'); 
-        }}
-      >
-        <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>Join Zoom Session</Text>
-      </TouchableOpacity>
-      {/* --- NEW: The Button to Open the Feedback Modal --- */}
-      <TouchableOpacity 
-        style={{
-          backgroundColor: '#4CAF50', 
-          padding: 12, 
-          borderRadius: 8, 
-          alignItems: 'center',
-          marginTop: 10
-        }} 
-        onPress={(e) => { 
-          e.stopPropagation(); 
-          setIsFeedbackVisible(true); 
-        }}
-      >
-        <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>Leave Feedback</Text>
-      </TouchableOpacity>
-
-      {/* --- NEW: The Actual Modal Component --- */}
-      <FeedbackModal 
-        isVisible={isFeedbackVisible} 
-        onClose={() => setIsFeedbackVisible(false)} 
-      />
     </TouchableOpacity>
   );
 }

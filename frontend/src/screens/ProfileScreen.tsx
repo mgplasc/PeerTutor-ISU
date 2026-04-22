@@ -1,14 +1,33 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { COLORS } from '../constants/colors';
 import Avatar from '../components/Avatar';
 import RoleSwitch from '../components/RoleSwitch';
 import { useAuth } from '../context/AuthContext';
+import { deleteAccount } from '../services/authService';
+import { getUserProfiles } from '../services/profileService';
+import { ProfileStackParamList } from '../navigation/AppNavigator';
+
+type ProfileScreenNavigationProp = NativeStackNavigationProp<ProfileStackParamList, 'Profile'>;
 
 function ProfileScreen() {
   const auth = useAuth();
+  const [deleting, setDeleting] = useState(false);
+  const navigation = useNavigation<ProfileScreenNavigationProp>();
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity onPress={() => navigation.navigate('EditProfile')} style={{ marginRight: 15 }}>
+          <Text style={{ color: COLORS.white, fontSize: 16, fontWeight: '600' }}>Edit</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
 
   if (auth.user.id === '') {
     return (
@@ -45,16 +64,74 @@ function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Courses Offered</Text>
           <View style={styles.courseRow}>
-            {tp.coursesOffered.map(function(course) {
-              return (
-                <View key={String(course.id)} style={styles.courseTag}>
-                  <Text style={styles.courseText}>{course.courseNumber}</Text>
-                </View>
-              );
-            })}
+            {tp.coursesOffered.map((course: any) => (
+              <View key={String(course.id)} style={styles.courseTag}>
+                <Text style={styles.courseText}>{course.courseNumber}</Text>
+              </View>
+            ))}
           </View>
         </View>
       );
+    }
+  }
+
+  function handleDeleteProfile() {
+    const hasBoth = auth.user.hasStudentProfile && auth.user.hasTutorProfile;
+
+    if (hasBoth) {
+      Alert.alert(
+        'Delete Profile',
+        'You have both a student and tutor profile. What would you like to delete?',
+        [
+          { text: 'Student Profile', onPress: () => confirmDelete('STUDENT') },
+          { text: 'Tutor Profile', onPress: () => confirmDelete('TUTOR') },
+          { text: 'Both (Delete Account)', onPress: () => confirmDelete('BOTH') },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+    } else {
+      const profileName = auth.user.hasStudentProfile ? 'student' : 'tutor';
+      Alert.alert(
+        'Delete Account',
+        `Are you sure you want to delete your ${profileName} profile? This will permanently remove all your data.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', onPress: () => confirmDelete('BOTH'), style: 'destructive' },
+        ]
+      );
+    }
+  }
+
+  async function confirmDelete(type: 'STUDENT' | 'TUTOR' | 'BOTH') {
+    setDeleting(true);
+    try {
+      await deleteAccount(type);
+
+      if (type === 'BOTH') {
+        auth.logout();
+      } else {
+        const profiles = await getUserProfiles(auth.user.id);
+        const updatedUser = {
+          ...auth.user,
+          hasStudentProfile: profiles.studentProfileExists,
+          hasTutorProfile: profiles.tutorProfileExists,
+          studentProfile: profiles.studentProfile,
+          tutorProfile: profiles.tutorProfile,
+        };
+        auth.setUser(updatedUser, auth.token ?? undefined);
+
+        if ((type === 'STUDENT' && auth.activeRole === 'STUDENT') ||
+            (type === 'TUTOR' && auth.activeRole === 'TUTOR')) {
+          const newRole = type === 'STUDENT' ? 'TUTOR' : 'STUDENT';
+          auth.setActiveRole(newRole);
+        }
+
+        Alert.alert('Success', `${type} profile deleted successfully.`);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to delete profile. Please try again.');
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -108,6 +185,10 @@ function ProfileScreen() {
       {coursesSection}
 
       <View style={styles.section}>
+        <TouchableOpacity style={styles.deleteBtn} onPress={handleDeleteProfile} disabled={deleting}>
+          <Text style={styles.deleteText}>{deleting ? 'Deleting...' : 'Delete Profile'}</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.logoutBtn} onPress={auth.logout}>
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
@@ -233,6 +314,18 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: COLORS.red,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  deleteBtn: {
+    backgroundColor: '#EF4444',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  deleteText: {
+    color: COLORS.white,
     fontSize: 15,
     fontWeight: '700',
   },

@@ -1,4 +1,3 @@
-// DTO for updating student profiles, extending the base ProfileUpdateRequest with student-specific fields
 package com.peertutor.dto;
 
 public class StudentProfileUpdateRequest extends ProfileUpdateRequest {
@@ -6,6 +5,10 @@ public class StudentProfileUpdateRequest extends ProfileUpdateRequest {
     private String lastName;
     private String major;
     private Integer expectedGraduation;
+    
+    // Explicitly redeclare bio to ensure JSON mapping
+    private String bio;
+    private String profilePhotoUrl;
 
     // Getters and Setters
     public String getFirstName() { return firstName; }
@@ -19,4 +22,10 @@ public class StudentProfileUpdateRequest extends ProfileUpdateRequest {
 
     public Integer getExpectedGraduation() { return expectedGraduation; }
     public void setExpectedGraduation(Integer expectedGraduation) { this.expectedGraduation = expectedGraduation; }
+    
+    public String getBio() { return bio; }
+    public void setBio(String bio) { this.bio = bio; }
+    
+    public String getProfilePhotoUrl() { return profilePhotoUrl; }
+    public void setProfilePhotoUrl(String profilePhotoUrl) { this.profilePhotoUrl = profilePhotoUrl; }
 }
