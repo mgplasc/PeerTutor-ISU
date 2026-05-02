@@ -65,8 +65,8 @@ function RoleSwitch() {
 
   async function handleAddTutorProfile() {
     const parsedRate = parseFloat(hourlyRate);
-    if (Number.isNaN(parsedRate) || parsedRate <= 0) {
-      Alert.alert('Invalid Rate', 'Please enter a valid hourly rate.');
+    if (Number.isNaN(parsedRate) || parsedRate <= 0 || parsedRate > 200) {
+      Alert.alert('Invalid Rate', 'Hourly rate must be between $1 and $200.');
       return;
     }
     if (selectedCourseIds.length === 0) {

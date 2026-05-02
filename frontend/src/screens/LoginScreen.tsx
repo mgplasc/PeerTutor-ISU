@@ -122,6 +122,11 @@ function LoginScreen({ navigation }: LoginScreenProps) {
       const expectedGraduation = Number.isNaN(parsedGradYear) ? 0 : parsedGradYear;
 
       const parsedRate = parseFloat(hourlyRate);
+      if (mode === 'signup-tutor' && (!Number.isNaN(parsedRate)) && (parsedRate <= 0 || parsedRate > 200)) {
+        Alert.alert('Invalid Rate', 'Hourly rate must be between $1 and $200.');
+        setLoading(false);
+        return;
+      }
       const resolvedHourlyRate = Number.isNaN(parsedRate) ? 0 : parsedRate;
 
       const payload: any = {

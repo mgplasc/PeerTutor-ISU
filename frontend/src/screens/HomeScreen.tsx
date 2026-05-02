@@ -79,7 +79,7 @@ function HomeScreen({ navigation }: HomeScreenProps) {
   async function loadTutors(searchQuery: string, filters: TutorFilters) {
     setLoading(true);
     try {
-      const results = await getTutors(searchQuery, filters);
+      const results = await getTutors(searchQuery, filters, auth.user.id);
       setTutors(results);
     } catch (err) {
       setTutors([]);
@@ -142,7 +142,7 @@ function HomeScreen({ navigation }: HomeScreenProps) {
             style={styles.searchInput}
             value={query}
             onChangeText={handleSearch}
-            placeholder="Search by course or name..."
+            placeholder="Search by course number..."
             placeholderTextColor={COLORS.darkGray}
           />
           <TouchableOpacity style={styles.filterBtn} onPress={openFilters} activeOpacity={0.8}>

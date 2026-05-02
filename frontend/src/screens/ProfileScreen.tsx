@@ -83,9 +83,9 @@ function ProfileScreen() {
         'Delete Profile',
         'You have both a student and tutor profile. What would you like to delete?',
         [
-          { text: 'Student Profile', onPress: () => confirmDelete('STUDENT') },
-          { text: 'Tutor Profile', onPress: () => confirmDelete('TUTOR') },
-          { text: 'Both (Delete Account)', onPress: () => confirmDelete('BOTH') },
+          { text: 'Student Profile', onPress: () => Alert.alert('Are you sure?', 'This will permanently delete your student profile.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: () => confirmDelete('STUDENT') }]) },
+          { text: 'Tutor Profile', onPress: () => Alert.alert('Are you sure?', 'This will permanently delete your tutor profile.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: () => confirmDelete('TUTOR') }]) },
+          { text: 'Both (Delete Account)', onPress: () => Alert.alert('Are you sure?', 'This will permanently delete your account and all data.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: () => confirmDelete('BOTH') }]) },
           { text: 'Cancel', style: 'cancel' },
         ]
       );
