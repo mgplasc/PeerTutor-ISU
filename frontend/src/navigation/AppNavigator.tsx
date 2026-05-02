@@ -1,4 +1,5 @@
 import React from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { COLORS } from '../constants/colors';
@@ -81,6 +82,26 @@ function ProfileStack() {
 
 function AppNavigator() {
   const auth = useAuth();
+
+  // block access to the app if email is not yet verified.
+  if (auth.user.id !== '' && !auth.user.emailVerified) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F7FA', padding: 32 }}>
+        <Text style={{ fontSize: 20, fontWeight: '800', color: '#CE1126', marginBottom: 12 }}>
+          Verify Your Email
+        </Text>
+        <Text style={{ fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 22, marginBottom: 24 }}>
+          A verification link was sent to {auth.user.email}. Please check your inbox and click the link before continuing.
+        </Text>
+        <TouchableOpacity
+          style={{ backgroundColor: '#CE1126', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 32 }}
+          onPress={() => auth.logout()}
+        >
+          <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 15 }}>Back to Login</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   const firstTab = auth.activeRole === 'TUTOR' ? (
     <Tab.Screen

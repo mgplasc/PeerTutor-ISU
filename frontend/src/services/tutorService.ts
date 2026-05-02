@@ -34,22 +34,21 @@ export interface Tutor {
   avatar: string;
   avatarBg: string;
   year: string;
-  major?: string;
   bio?: string;
 }
 
 function mapTutorDtoToTutor(dto: TutorDto): Tutor {
   let mode = 'In-Person';
-  if (dto.availableForOnline && dto.availableForInPerson) mode = 'Both';
-  else if (dto.availableForOnline) mode = 'Online';
-  else if (dto.availableForInPerson) mode = 'In-Person';
+  if (dto.availableForOnline && dto.availableForInPerson) { mode = 'Both'; }
+  else if (dto.availableForOnline) { mode = 'Online'; }
+  else if (dto.availableForInPerson) { mode = 'In-Person'; }
 
   const available = dto.availableForOnline || dto.availableForInPerson;
   const avatar = (dto.firstName?.[0] || '') + (dto.lastName?.[0] || '');
   const avatarBg = '#CE1126';
   const reviews = dto.totalSessions || 0;
-  const rate = `$${dto.hourlyRate}/hr`;
-  const courses = (dto.coursesOffered || []).map(c => c.courseNumber);
+  const rate = '$' + dto.hourlyRate + '/hr';
+  const courses = (dto.coursesOffered || []).map(function(c) { return c.courseNumber; });
 
   return {
     id: dto.id,
@@ -64,26 +63,40 @@ function mapTutorDtoToTutor(dto: TutorDto): Tutor {
     avatar: avatar || '?',
     avatarBg,
     year: dto.major,
-    major: dto.major,
     bio: dto.bio,
   };
 }
 
-export async function getTutors(searchQuery?: string, filters?: TutorFilters): Promise<Tutor[]> {
+export async function getTutors(
+  searchQuery?: string,
+  filters?: TutorFilters,
+  currentUserId?: string
+): Promise<Tutor[]> {
   const params: any = {};
-  if (searchQuery) params.courseNumber = searchQuery;
-  if (filters?.sessionFormat) params.sessionFormat = filters.sessionFormat;
-  if (filters?.minRating) params.minRating = filters.minRating;
-  if (filters?.maxPrice) params.maxPrice = filters.maxPrice;
-  if (filters?.available) params.available = filters.available;
+  if (searchQuery) { params.courseNumber = searchQuery; }
+  if (filters?.sessionFormat) { params.sessionFormat = filters.sessionFormat; }
+  if (filters?.minRating) { params.minRating = filters.minRating; }
+  if (filters?.maxPrice) { params.maxPrice = filters.maxPrice; }
+  if (filters?.available) { params.available = filters.available; }
 
-  const response = await api.get('/api/tutors', { params });
-  const dtos: TutorDto[] = response.data;
-  return dtos.map(mapTutorDtoToTutor);
+  try {
+    const response = await api.get('/api/tutors', { params });
+    const dtos: TutorDto[] = response.data;
+
+    return dtos
+      .filter(function(dto) {
+        if (!currentUserId) { return true; }
+        return dto.id !== currentUserId;
+      })
+      .map(mapTutorDtoToTutor);
+  } catch (error) {
+    console.error('Failed to fetch tutors:', error);
+    return [];
+  }
 }
 
 export async function getTutorById(id: string): Promise<Tutor> {
-  const response = await api.get(`/api/tutors/${id}`);
+  const response = await api.get('/api/tutors/' + id);
   const dto: TutorDto = response.data;
   return mapTutorDtoToTutor(dto);
 }

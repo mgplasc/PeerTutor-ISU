@@ -10,7 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import FeedbackModal from '../components/FeedbackModal';
 
 type CalendarMode = 'list' | 'week' | 'month';
-type StatusFilter = 'all' | 'upcoming' | 'pending' | 'completed';
+type StatusFilter = 'all' | 'upcoming' | 'pending' | 'completed' | 'declined';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = [
@@ -54,10 +54,11 @@ function CalendarScreen() {
     return sessions.filter(s => {
       if (statusFilter === 'upcoming') {
         const d = new Date(s.sessionDate + 'T23:59:59');
-        return (s.status === 'CONFIRMED' || s.status === 'PENDING') && d >= today;
+        return (s.status === 'CONFIRMED' || s.status === 'PENDING') && d >= today && s.status !== 'DECLINED';
       }
       if (statusFilter === 'pending') return s.status === 'PENDING';
-      if (statusFilter === 'completed') return s.status === 'COMPLETED' || s.status === 'DECLINED';
+      if (statusFilter === 'completed') return s.status === 'COMPLETED';
+      if (statusFilter === 'declined') return s.status === 'DECLINED';
       return true;
     });
   }
@@ -426,7 +427,7 @@ function CalendarScreen() {
 
   const filterRow = calendarMode === 'list' ? (
     <View style={styles.filterRow}>
-      {(['upcoming', 'pending', 'completed', 'all'] as StatusFilter[]).map(f => (
+      {((['upcoming', 'pending', 'completed', 'declined', 'all'] as StatusFilter[])).map(f => (
         <TouchableOpacity
           key={f}
           style={[styles.filterBtn, statusFilter === f && styles.filterBtnActive]}
